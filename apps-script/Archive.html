@@ -1,0 +1,2083 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="<?= theme ?>">
+<head>
+<base target="_blank">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+  /* ── 색 토큰 ──────────────────────────────────────────────
+     포인트 컬러는 런처의 CMF LAB 카드와 같은 #9C7C62(베이지).
+     밝은 화면 / 어두운 화면이 같은 토큰 이름을 쓰므로,
+     data-theme 만 바꾸면 화면 전체가 따라 바뀐다.
+     시뮬레이터·회의록과 같은 토큰 이름을 쓴다 — 세 화면의 규칙이 하나다. */
+  :root {
+    /* 기본값 = Light (밝은 갤러리 톤). data-theme 속성이 없거나 값이 이상해도
+       항상 이 값이 적용되므로 "라이트인데 배경이 검게 보이는" 문제가 생기지 않는다. */
+    --bg:#FFFFFF; --panel:#FFFFFF; --card:#FAFAF8; --sunk:#F3F2F0;
+    --ink:#141312; --ink-soft:#5C5852; --ink-faint:#928D86; --line:#EBE9E5;
+    --accent:#9C7C62; --accent-ink:#7A5D46; --accent-on:#FFFFFF;
+    --accent-soft:rgba(156,124,98,.07); --accent-line:rgba(156,124,98,.26);
+    --good:#3E8F5C; --warn:#9A6B12; --bad:#A43B2E;
+    --shadow:0 8px 26px rgba(20,18,16,.08);
+    --r:6px; --rs:6px;
+    --mono:'Cascadia Code','SF Mono','Roboto Mono',ui-monospace,'Segoe UI Mono',Consolas,monospace;
+  }
+  [data-theme="dark"] {
+    --bg:#0C0A09; --panel:#171412; --card:#1E1A17; --sunk:#100D0B;
+    --ink:#F4EFE9; --ink-soft:#A79C91; --ink-faint:#786D63; --line:#2E2823;
+    --accent:#9C7C62; --accent-ink:#C9A98D; --accent-on:#1C1409;
+    --accent-soft:rgba(156,124,98,.20); --accent-line:rgba(201,169,141,.34);
+    --good:#7FD39B; --warn:#D9A441; --bad:#E0745F;
+    --shadow:0 18px 48px rgba(0,0,0,.5);
+  }
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:"Pretendard Variable",Pretendard,Inter,-apple-system,BlinkMacSystemFont,"Malgun Gothic",sans-serif;
+    font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased;letter-spacing:-.005em;
+    transition:background .2s,color .2s}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 22px 90px}
+
+  .top{display:flex;align-items:center;gap:18px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:11px;line-height:1}
+  .brand .b{font-size:19px;font-weight:800;letter-spacing:-.02em}
+  .brand .d{width:1px;height:16px;background:currentColor;opacity:.25}
+  .brand .l{font-size:19px;font-weight:500;letter-spacing:-.01em;color:var(--ink-soft)}
+  .top .sp{flex:1}
+  .sw{display:inline-flex;align-items:center;gap:9px;background:transparent;border:0;
+    color:var(--ink-faint);font:inherit;font-size:11.5px;font-weight:700;cursor:pointer;padding:0}
+  .sw .track{position:relative;width:46px;height:26px;border-radius:999px;
+    background:var(--sunk);border:1px solid var(--line);transition:background .18s,border-color .18s}
+  .sw .knob{position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
+    background:var(--accent);display:flex;align-items:center;justify-content:center;
+    font-size:11px;line-height:1;color:var(--accent-on);transition:left .18s}
+  [data-theme="light"] .sw .knob{left:22px}
+  @media (prefers-color-scheme: light){:root:not([data-theme="dark"]) .sw .knob{left:22px}}
+  .sw:hover .track{border-color:var(--accent-line)}
+
+  .tabs{display:flex;align-items:center;gap:6px;margin-top:20px;
+    border-bottom:1px solid var(--line);flex-wrap:wrap}
+  .tab{background:transparent;border:0;border-bottom:2px solid transparent;margin-bottom:-1px;
+    color:var(--ink-faint);font:inherit;font-size:13px;font-weight:700;
+    padding:10px 14px;cursor:pointer;text-decoration:none;display:inline-block}
+  .tab:hover{color:var(--ink)}
+  .tab.on{color:var(--ink);border-bottom-color:var(--accent)}
+  .tabs .sp{flex:1}
+  .tab.link{font-weight:600;font-size:12px;color:var(--accent-ink)}
+
+  .view{display:none}
+  .view.on{display:block}
+
+  .head{display:flex;align-items:flex-end;justify-content:space-between;
+    gap:14px;flex-wrap:wrap;margin:22px 0 4px}
+  .head h2{margin:0;font-size:24px;font-weight:500;letter-spacing:-.02em}
+  .head h2 b{font-weight:800}
+  .head h2 span{color:var(--ink-faint);margin-left:6px}
+  .lede{margin:8px 0 0;font-size:13px;color:var(--ink-soft)}
+
+  .stat{display:flex;gap:30px;align-items:baseline}
+  .stat>div{cursor:pointer}
+  .stat b{display:block;font-size:23px;font-weight:800;letter-spacing:-.02em;line-height:1.2}
+  .stat span{display:block;margin-top:3px;font-size:10.5px;font-weight:700;
+    letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+    padding:24px 26px;margin-top:18px}
+  .sec{padding:26px 0 2px;border-top:1px solid var(--line);margin-top:26px}
+  .sec:first-child{padding-top:0;border-top:0;margin-top:0}
+  .sec-h{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .sec-h h3{margin:0;font-size:11.5px;font-weight:800;letter-spacing:.14em;text-transform:uppercase}
+  .sec-h p{margin:0;font-size:12px;color:var(--ink-faint)}
+  .sec-h p em{font-style:normal;color:var(--accent-ink);font-weight:700}
+
+  label{display:block;margin:0 0 6px;font-size:12px;font-weight:700;color:var(--ink-soft)}
+  .req::after{content:' *';color:var(--accent-ink)}
+  input,textarea,select{width:100%;background:var(--card);border:1px solid var(--line);
+    border-radius:var(--rs);color:var(--ink);font:inherit;font-size:13px;padding:10px 12px;outline:none;
+    transition:border-color .15s,box-shadow .15s}
+  select{appearance:none;-webkit-appearance:none;cursor:pointer;
+    background-image:linear-gradient(45deg,transparent 50%,currentColor 50%),
+                     linear-gradient(135deg,currentColor 50%,transparent 50%);
+    background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;
+    background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:30px}
+  input:focus,textarea:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  textarea{resize:vertical;line-height:1.65}
+  input[type=checkbox]{width:auto;accent-color:var(--accent)}
+  input[type=date]{color-scheme:dark}
+  [data-theme="light"] input[type=date]{color-scheme:light}
+  @media (prefers-color-scheme: light){:root:not([data-theme="dark"]) input[type=date]{color-scheme:light}}
+  .hint{margin:6px 0 0;font-size:11.5px;color:var(--ink-faint);line-height:1.65}
+  .hint b{color:var(--ink-soft)}
+
+  .grid6{display:grid;gap:18px;grid-template-columns:repeat(6,1fr)}
+  .grid6>*{grid-column:span 6}
+  .grid6.three>*{grid-column:span 2}
+  .grid6.two>*{grid-column:span 3}
+  .grid6.one>*{grid-column:span 2}
+  .grid6+.grid6,.grid6+.fld,.fld+.grid6,.fld+.fld{margin-top:18px}
+  .pair{display:flex;gap:8px;align-items:stretch}
+  .pair>input:not(.pick){flex:1;min-width:0}
+
+  .etc{margin-top:12px;border:1.5px solid var(--accent);background:var(--accent-soft);
+    border-radius:12px;padding:12px 14px 14px}
+  .etc>label{color:var(--accent-ink)}
+  .etc .hint{color:var(--accent-ink);opacity:.9}
+
+  .pick{width:46px;flex:none;align-self:stretch;padding:0;border:1px solid var(--line);
+    border-radius:var(--rs);overflow:hidden;cursor:pointer;background:none}
+  .pick::-webkit-color-swatch-wrapper{padding:3px}
+  .pick::-webkit-color-swatch{border:0;border-radius:5px}
+
+  .btn{background:var(--accent);border:1px solid var(--accent);color:var(--accent-on);
+    font:inherit;font-size:13px;font-weight:700;padding:12px 26px;border-radius:999px;
+    cursor:pointer;text-decoration:none;display:inline-block;text-align:center}
+  .btn:hover{filter:brightness(1.06)}
+  .btn:disabled{opacity:.5;cursor:default;filter:none}
+  .btn.ghost{background:transparent;border-color:var(--line);color:var(--ink)}
+  .btn.ghost:hover{border-color:var(--accent-line);filter:none}
+  .mini{background:transparent;border:1px solid var(--line);color:var(--ink-soft);
+    font:inherit;font-size:11.5px;font-weight:600;padding:7px 12px;border-radius:999px;cursor:pointer}
+  .mini:hover{border-color:var(--ink-faint);color:var(--ink)}
+  .mini.on{background:var(--accent);border-color:var(--accent);color:var(--accent-on)}
+  .mini.danger{color:var(--bad)}
+  .mini.danger:hover{border-color:var(--bad)}
+  .mini:disabled{opacity:.4;cursor:default}
+  .bar{display:flex;align-items:center;gap:16px;flex-wrap:wrap;
+    margin-top:24px;padding-top:20px;border-top:1px solid var(--line)}
+  .bar .t{flex:1 1 240px;font-size:12px;color:var(--ink-faint);line-height:1.6}
+  .bar .btn{margin-left:auto}
+
+  .status{margin-top:14px;font-size:12.5px;color:var(--ink-soft)}
+  .result{display:none;margin-top:20px;padding:18px 20px;border-radius:var(--rs);
+    border:1px solid var(--accent-line);background:var(--accent-soft);
+    font-size:12.5px;line-height:1.9;color:var(--ink-soft)}
+  .result b{color:var(--ink)}
+  .result .rcode{font-family:var(--mono);font-size:23px;font-weight:700;letter-spacing:-.01em;
+    color:var(--ink);margin-bottom:4px;overflow-wrap:anywhere}
+  .result.review{border-color:rgba(217,164,65,.42);background:rgba(217,164,65,.12)}
+  .result.err{border-color:rgba(224,116,95,.45);background:rgba(224,116,95,.12);color:var(--bad)}
+  .result.err b{color:var(--bad)}
+
+  .search-row{position:relative;margin-top:18px}
+  .search-row svg{position:absolute;left:17px;top:50%;transform:translateY(-50%);
+    width:16px;height:16px;stroke:var(--ink-faint);fill:none;pointer-events:none}
+  .search{border-radius:999px;padding:15px 20px 15px 44px;font-size:15px;background:var(--panel)}
+  .tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:14px}
+  .pillbtn{display:inline-flex;align-items:center;gap:7px;background:var(--panel);
+    border:1px solid var(--line);color:var(--ink-soft);font:inherit;font-size:11.5px;
+    font-weight:700;letter-spacing:.02em;padding:8px 16px;border-radius:999px;cursor:pointer;
+    white-space:nowrap;transition:border-color .15s,color .15s,background .15s}
+  .pillbtn svg{width:13px;height:13px;stroke:currentColor;fill:none;flex:none}
+  .pillbtn:hover{border-color:var(--accent-line);color:var(--ink)}
+  .pillbtn.on{background:var(--ink);border-color:var(--ink);color:var(--bg)}
+  .pillbtn .n{background:var(--accent);color:var(--accent-on);font-size:9.5px;font-weight:800;
+    border-radius:999px;padding:1px 6px;line-height:1.5}
+  .tools .right{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-left:auto}
+  .vbar{width:1px;align-self:stretch;min-height:24px;background:var(--line);margin:0 4px}
+  .seg{display:inline-flex;background:var(--sunk);border:1px solid var(--line);
+    border-radius:999px;padding:2px}
+  .seg button{border:0;background:transparent;color:var(--ink-faint);font:inherit;
+    font-size:11px;font-weight:700;letter-spacing:.04em;padding:6px 14px;border-radius:999px;
+    cursor:pointer;white-space:nowrap}
+  .seg button.on{background:var(--accent);color:var(--accent-on)}
+  .bulk{display:flex;justify-content:flex-end;margin-top:12px}
+
+  .fpanel{display:none;margin-top:10px;padding:20px 22px;background:var(--panel);
+    border:1px solid var(--line);border-radius:var(--r)}
+  .fpanel.on{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:16px 20px}
+  .fpanel .fp-col label{display:block;margin:0 0 6px;font-size:10px;font-weight:800;
+    letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+  .fpanel select{border-radius:var(--rs);font-size:12.5px}
+  .fpanel .fp-reset{grid-column:1/-1;display:flex;justify-content:flex-end;
+    padding-top:4px;border-top:1px solid var(--line);margin-top:2px}
+
+
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:3px}
+  .item{background:var(--panel);border:0;border-radius:2px;
+    overflow:hidden;cursor:pointer;transition:box-shadow .15s,transform .1s}
+  .item:hover{box-shadow:inset 0 0 0 1px var(--accent-line)}
+  .item:active{transform:translateY(1px)}
+  .item.open{box-shadow:inset 0 0 0 1.5px var(--accent)}
+  .item .swatch{height:236px;background-size:cover;
+    background-repeat:no-repeat;background-position:center}
+  .item .body{padding:11px 13px 13px}
+  .code{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:-.01em;
+    white-space:nowrap;cursor:pointer}
+  .code:hover{color:var(--accent-ink);text-decoration:underline;text-underline-offset:3px}
+  .item .nm{margin:4px 0 9px;font-size:10px;font-weight:700;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--ink-faint)}
+  .item .pd{margin:-5px 0 9px;font-size:11px;color:var(--ink-soft);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .item .pd i{font-style:normal;font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-faint)}
+  .bdgs{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+  .bdg{font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:999px;
+    background:var(--sunk);border:1px solid var(--line);color:var(--ink-faint)}
+  .bdg.st{cursor:pointer}
+  .bdg.ok{background:var(--accent-soft);border-color:var(--accent-line);color:var(--accent-ink)}
+  .bdg.rv{background:rgba(217,164,65,.16);border-color:rgba(217,164,65,.4);color:var(--warn)}
+
+  .detail{display:none;margin-top:14px;padding-top:13px;border-top:1px solid var(--line);
+    font-size:12px;color:var(--ink-soft);line-height:1.95}
+  .item.open .detail{display:block}
+  .detail b{color:var(--ink);font-weight:700}
+  .boxbig{display:flex;align-items:center;gap:10px;background:var(--sunk);
+    border:1px solid var(--line);border-radius:var(--rs);padding:9px 14px;margin-bottom:11px}
+  .boxbig .l{font-size:9.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--ink-faint);line-height:1.45}
+  .boxbig .v{margin-left:auto;font-family:var(--mono);font-size:21px;font-weight:700;color:var(--accent-ink)}
+  .meta{margin-top:9px;font-size:11.5px;color:var(--ink-soft);line-height:1.65}
+  .meta b{display:block;color:var(--ink-faint);font-size:9.5px;font-weight:800;
+    letter-spacing:.1em;text-transform:uppercase;margin-bottom:1px}
+  .plist{display:flex;flex-direction:column;gap:2px;margin:2px 0 6px}
+  .plist .p{display:flex;justify-content:space-between;gap:8px}
+  .plist .p .d{color:var(--ink-faint);font-size:11px;white-space:nowrap}
+  .ops{display:flex;gap:4px;margin-top:13px;flex-wrap:nowrap}
+  .ops .mini{flex:1;padding:6px 2px;font-size:10px;text-align:center;white-space:nowrap}
+
+  .grp{margin-bottom:30px}
+  .grp-h{display:flex;align-items:baseline;gap:10px;margin:0 0 12px;padding-bottom:8px;
+    border-bottom:2px solid var(--ink);flex-wrap:wrap}
+  .grp-h b{font-size:14.5px;font-weight:800}
+  .grp-h span{font-size:11px;font-weight:700;color:var(--ink-faint);
+    background:var(--sunk);border:1px solid var(--line);border-radius:999px;padding:2px 10px}
+
+  .tbl{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+    overflow-x:auto;-webkit-overflow-scrolling:touch}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th{background:var(--sunk);color:var(--ink-faint);text-align:left;white-space:nowrap;
+    font-size:10.5px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    padding:12px 14px;border-bottom:1px solid var(--line)}
+  td{padding:11px 14px;border-bottom:1px solid var(--line);vertical-align:middle;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px}
+  td.free{white-space:nowrap;overflow:visible;text-overflow:clip;max-width:none}
+  tr:last-child td{border-bottom:0}
+  tbody tr:hover td{background:var(--card)}
+  td .code{font-size:12px}
+  .dot{display:inline-block;vertical-align:middle;width:22px;height:22px;border-radius:50%;
+    border:1px solid var(--line);background-size:cover;background-position:center;flex:none}
+  .grp-td{background:var(--sunk);font-weight:800;font-size:12px;letter-spacing:.05em;
+    text-transform:uppercase;white-space:nowrap;overflow:visible;max-width:none}
+
+  .empty{margin:26px 0;padding:40px 20px;text-align:center;border:1px dashed var(--line);
+    border-radius:var(--rs);color:var(--ink-faint);font-size:12.5px}
+  #loading{padding:110px 0;text-align:center;color:var(--ink-faint);
+    font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+
+  .pager{display:none;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+    margin-top:22px;padding-top:16px;border-top:1px solid var(--line)}
+  .pager .info{font-size:12px;color:var(--ink-faint)}
+  .pager .ctl{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .pager #pgPos{min-width:52px;text-align:center;font-size:12.5px;font-weight:700}
+
+  .strip{display:flex;flex-direction:column;align-items:center;gap:13px;text-align:center;
+    background:var(--sunk);border:1px solid var(--line);border-radius:var(--r);padding:24px 22px 22px}
+  .strip .lbl{font-size:10px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
+  .strip .code-row{display:flex;align-items:baseline;justify-content:center;gap:6px;flex-wrap:wrap}
+  .strip .code-row i{font-family:var(--mono);font-size:26px;font-style:normal;color:var(--ink-faint);line-height:1}
+  .sg{display:flex;flex-direction:column;align-items:center;gap:7px}
+  .sg b{font-family:var(--mono);font-size:26px;font-weight:700;letter-spacing:-.01em;line-height:1;color:var(--ink)}
+  .sg b.pend{color:var(--ink-faint)}
+  .sg b.prov{color:var(--accent-ink);border-bottom:1.5px dotted var(--accent-line);padding-bottom:3px}
+  .sg span{font-size:10.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
+  .strip-foot{margin:8px 2px 0;font-size:10.5px;color:var(--ink-faint);line-height:1.6;text-align:right}
+
+  .drop{position:relative;display:flex;align-items:center;gap:15px;
+    border:1.5px dashed var(--line);border-radius:12px;padding:13px 16px;background:var(--card);
+    transition:border-color .15s,background .15s}
+  .drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+  .drop input[type=file]{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer;padding:0;border:0}
+  .drop .thumb{width:62px;height:62px;flex:none;border-radius:8px;background:var(--sunk);
+    border:1px solid var(--line);background-size:cover;background-position:center;
+    display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;color:var(--ink-faint)}
+  .drop .tx{min-width:0}
+  .drop .tx b{display:block;font-size:13px;font-weight:700;overflow-wrap:anywhere}
+  .drop .tx span{display:block;margin-top:4px;font-size:11.5px;color:var(--ink-faint);line-height:1.6}
+
+  .wo-split{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:22px;align-items:start}
+  .wo-view{position:sticky;top:20px;background:var(--sunk);border:1px solid var(--line);
+    border-radius:var(--rs);padding:12px}
+  .wo-view-h{display:flex;align-items:center;gap:7px;margin-bottom:10px;flex-wrap:wrap}
+  .wo-view-h b{font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}
+  .wo-view-h #woPg{min-width:46px;text-align:center;font-size:11.5px;font-weight:700}
+  .wo-canvas{position:relative;background:var(--panel);border:1px solid var(--line);
+    border-radius:6px;overflow:auto;max-height:62vh}
+  .wo-canvas.eye{cursor:crosshair}
+  .wo-page{position:relative;line-height:0}
+  .wo-page img{display:block;width:100%}
+  .wo-hl{position:absolute;display:none;pointer-events:none;border-radius:2px;
+    border:2px solid var(--accent);background:var(--accent-soft)}
+  .wo-none{padding:40px 14px;text-align:center;font-size:12px;color:var(--ink-faint);line-height:1.8}
+
+  .woi{display:flex;gap:14px;align-items:flex-start;padding:18px 0;border-top:1px solid var(--line)}
+  .woi:first-child{border-top:0;padding-top:2px}
+  .woi.warn{background:rgba(217,164,65,.07);border-radius:12px;padding-left:12px;padding-right:12px}
+  .woi.active{box-shadow:inset 3px 0 0 var(--accent);border-radius:12px;padding-left:12px}
+  .woi .chk{margin:4px 0 0}
+  .woi .sq{width:46px;height:46px;flex:none;border-radius:10px;border:1px solid var(--line)}
+  .woi .f{flex:1;min-width:0}
+  .woi .f .grid6+.grid6{margin-top:14px}
+  .woh{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:11px}
+  .woh .n{font-size:10px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;
+    color:var(--ink-faint);background:var(--sunk);border:1px solid var(--line);
+    border-radius:999px;padding:3px 10px}
+  .woh .loc{font-size:11px;color:var(--ink-faint)}
+  .woh .miss{font-size:10px;font-weight:800;color:var(--warn);background:rgba(217,164,65,.16);
+    border:1px solid rgba(217,164,65,.4);border-radius:999px;padding:3px 10px}
+  .wosrc{margin-top:10px;font-size:11px;color:var(--ink-faint);line-height:1.6;overflow-wrap:anywhere}
+  .wo-alert{border:1px solid rgba(217,164,65,.4);background:rgba(217,164,65,.1);color:var(--warn);
+    border-radius:var(--rs);padding:14px 16px;margin-bottom:18px;font-size:12.5px;line-height:1.85}
+  .wo-alert b{display:block;margin-bottom:3px}
+  .wo-alert a{color:var(--warn);cursor:pointer;text-decoration:underline;
+    text-underline-offset:2px;margin-right:10px;white-space:nowrap}
+
+  .plan{max-width:940px;margin:18px auto 0;background:var(--panel);border:1px solid var(--line);
+    border-radius:var(--r);padding:12px;cursor:zoom-in}
+  .plan svg{display:block;width:100%;height:auto}
+  .legend{max-width:940px;margin:18px auto 0;
+    display:grid;grid-template-columns:repeat(auto-fill,minmax(155px,1fr));gap:7px 14px}
+  .legend div{display:flex;gap:9px;align-items:baseline;font-size:12px;color:var(--ink-soft)}
+  .legend b{min-width:17px;font-family:var(--mono);font-size:13px;font-weight:700;color:var(--accent-ink)}
+  .pl-sheet{fill:var(--card);stroke:var(--line)}
+  .pl-wall{fill:none;stroke:var(--ink)}
+  .pl-guide{stroke:var(--line)}
+  .pl-dim{stroke:var(--ink-faint);fill:none}
+  .pl-dim-b{fill:var(--panel);stroke:var(--line)}
+  .pl-dim-t{fill:var(--ink-soft);font-size:11px;font-weight:700;letter-spacing:1px}
+  .pl-band-a{fill:var(--accent-soft);stroke:var(--accent-line)}
+  .pl-band-b{fill:var(--sunk);stroke:var(--line)}
+  .pl-band-ta{fill:var(--accent-ink);font-size:11px;font-weight:700;letter-spacing:.8px}
+  .pl-band-tb{fill:var(--ink-soft);font-size:11px;font-weight:700;letter-spacing:.8px}
+  .pl-box{fill:var(--sunk);stroke:var(--accent-line)}
+  .pl-box-l{fill:var(--accent-ink);font-size:16px;font-weight:800}
+  .pl-box-t{fill:var(--ink-soft);font-size:10.5px;font-weight:600}
+  .pl-corridor{fill:var(--ink-faint);font-size:12px;font-weight:600;letter-spacing:4px}
+  .pl-chair{fill:var(--card);stroke:var(--line)}
+  .pl-chair-b{fill:var(--accent-soft)}
+  .pl-chair-t{fill:var(--ink-soft);font-size:11px;font-weight:700}
+  .pl-zone{stroke:var(--accent);fill:none}
+  .pl-zone-t{fill:var(--accent-ink);font-size:12px;font-weight:700}
+  .pl-door{stroke:var(--ink-faint);fill:none}
+  .pl-door-t{fill:var(--ink);font-size:11px;font-weight:700}
+  .pl-door-s{fill:var(--ink-faint);font-size:9px;font-weight:600}
+  .pl-n{stroke:var(--ink-faint);fill:none}
+  .pl-n-x{stroke:var(--line)}
+  .pl-n-p{fill:var(--ink)}
+  .pl-n-t{fill:var(--ink);font-size:9px;font-weight:800}
+
+  .ovl{position:fixed;inset:0;z-index:200;display:none;background:rgba(0,0,0,.62);
+    align-items:flex-start;justify-content:center;padding:44px 16px;overflow-y:auto}
+  .ovl.on{display:flex}
+  .ovl-box{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);
+    box-shadow:var(--shadow);width:680px;max-width:100%;padding:26px 28px 22px}
+  .ovl-box h2{margin:0 0 4px;font-size:16px;font-weight:800}
+  .lock{background:var(--sunk);border:1px solid var(--line);border-radius:var(--rs);
+    padding:14px 16px;margin-top:14px;font-size:12px;color:var(--ink-faint);line-height:1.85}
+  .lock .code{font-size:15px;cursor:default;color:var(--ink)}
+  .ovl-btns{display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-top:22px}
+  .ovl-btns .sp{flex:1}
+  #planOvl .ovl-box{width:auto;max-width:96vw;padding:16px;cursor:zoom-out}
+  #planOvl .plan{width:88vw;max-width:none;margin:0;cursor:zoom-out}
+
+  .applied{background:var(--sunk);border:1px solid var(--line);border-radius:var(--rs);
+    padding:12px 14px;margin-top:8px}
+  .applied .a{display:flex;justify-content:space-between;gap:8px;font-size:12px;
+    padding:5px 0;border-bottom:1px solid var(--line)}
+  .applied .a:last-child{border-bottom:0}
+  .applied .a .d{color:var(--ink-faint)}
+  .add-row{display:flex;gap:7px;margin-top:10px}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(18px);
+    background:var(--ink);color:var(--bg);padding:11px 22px;border-radius:999px;
+    font-size:12.5px;font-weight:600;opacity:0;pointer-events:none;z-index:300;
+    transition:opacity .2s,transform .2s;max-width:90vw;text-align:center}
+  .toast.on{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  @media (max-width:1000px){
+    .wo-split{grid-template-columns:1fr}
+    .wo-view{position:static;order:-1}
+    .wo-canvas{max-height:44vh}
+  }
+  @media (max-width:720px){
+    .grid6.three>*,.grid6.two>*,.grid6.one>*{grid-column:span 6}
+    .bar .btn{margin-left:0;width:100%}
+  }
+  @media (max-width:640px){
+    input,textarea,select{font-size:16px}
+    .wrap{padding:18px 15px 70px}
+    .head h2{font-size:20px}
+    .stat{gap:20px}
+    .stat b{font-size:19px}
+    .card{padding:18px 16px}
+    .strip{padding:18px 12px 16px;gap:10px}
+    .strip .code-row{gap:3px}
+    .strip .code-row i,.sg b{font-size:17px}
+    .sg span{font-size:9px;letter-spacing:.03em}
+    .strip-foot{text-align:left}
+    .grid{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:2px}
+    .item .swatch{height:170px}
+    .ops{flex-wrap:wrap}
+    .ops .mini{flex:1 1 30%}
+    .ovl{padding:14px 10px 40px}
+    .ovl-box{padding:20px 16px 18px}
+    #planOvl .plan{width:92vw}
+    .woi{flex-wrap:wrap;gap:10px}
+    .woi .f{flex:1 1 100%}
+    .tools .right{margin-left:0;width:100%}
+    .tools .right .seg{margin-left:auto}
+  }
+
+  #print-root{display:none}
+  @media print{
+    .wrap,.ovl,.toast{display:none !important}
+    body{background:#fff !important;color:#000 !important}
+    #print-root{display:flex !important;flex-wrap:wrap;align-content:flex-start;gap:3mm;padding:2mm}
+    .plabel{width:40mm;height:22mm;border:.15mm dashed #aaa;border-radius:1mm;padding:1.8mm 2.2mm;
+      box-sizing:border-box;display:flex;gap:1.5mm;page-break-inside:avoid;background:#fff !important}
+    .plabel .pl{flex:1;display:flex;flex-direction:column;overflow:hidden}
+    .plc{font-family:var(--mono);font-weight:700;font-size:7.4pt;line-height:1.15;
+      letter-spacing:-.02em;color:#000 !important;word-break:break-all}
+    .pln{font-size:6.5pt;color:#333 !important;margin-top:.5mm}
+    .plp{font-size:5.8pt;color:#333 !important;margin-top:.3mm;white-space:nowrap;overflow:hidden}
+    .pli{font-size:5.5pt;color:#555 !important;margin-top:auto;line-height:1.55}
+    .pr{width:12.5mm;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.6mm}
+    .pq img,.pq canvas{width:10mm !important;height:10mm !important}
+    .pqb{font-family:var(--mono);font-size:8pt;font-weight:700;color:#000 !important;letter-spacing:.02em}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div class="brand"><span class="b">BEREX</span><span class="d"></span><span class="l">CMF LAB</span></div>
+    <span class="sp"></span>
+    <button class="sw" id="themeBtn" type="button" title="화면 밝기 전환">
+      <span class="track"><span class="knob" id="themeIco">☾︎</span></span>
+      <span id="themeLbl">Dark</span>
+    </button>
+  </header>
+
+  <nav class="tabs">
+    <a class="tab link" id="homeLink" href="#" style="display:none">← Applicators</a>
+    <button class="tab on" type="button" data-view="archive">아카이브</button>
+    <button class="tab" type="button" data-view="entry">CMF 등록</button>
+    <button class="tab" type="button" data-view="room">샘플실</button>
+    <button class="tab" type="button" data-view="wo">작업지시서 소재 추출</button>
+    <span class="sp"></span>
+    <a class="tab link" id="sheetLink" href="#" style="display:none" rel="noopener">등록대장 시트 ↗</a>
+  </nav>
+
+  <div id="loading">불러오는 중…</div>
+
+  <section class="view" id="viewArchive">
+    <div class="head">
+      <div>
+        <h2><b>CMF</b><span>아카이브</span></h2>
+        <p class="lede">팀의 모든 소재·컬러가 한 곳에.</p>
+      </div>
+      <div class="stat">
+        <div onclick="setStatusFilter('')"><b id="stTotal">0</b><span>등록 코드</span></div>
+        <div onclick="setStatusFilter('확정')"><b id="stOk" style="color:var(--accent-ink)">0</b><span>확정</span></div>
+        <div onclick="setStatusFilter('검토중')"><b id="stRv" style="color:var(--warn)">0</b><span>검토중</span></div>
+      </div>
+    </div>
+
+    <div class="search-row">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" stroke-width="1.7"/><line x1="21" y1="21" x2="16.2" y2="16.2" stroke-width="1.7" stroke-linecap="round"/></svg>
+      <input type="search" class="search" id="q" placeholder="코드, 컬러, 제품, 품번 검색" oninput="onFilterChange()">
+    </div>
+
+    <div class="tools">
+      <button class="pillbtn" id="filterToggle" type="button" onclick="toggleFilterPanel()">
+        <svg viewBox="0 0 24 24"><line x1="4" y1="7" x2="20" y2="7" stroke-width="1.6" stroke-linecap="round"/><circle cx="9" cy="7" r="2.3" stroke-width="1.6"/><line x1="4" y1="17" x2="20" y2="17" stroke-width="1.6" stroke-linecap="round"/><circle cx="15" cy="17" r="2.3" stroke-width="1.6"/></svg>
+        Filter <span class="n" id="filterActiveN" style="display:none">1</span>
+      </button>
+      <button class="pillbtn" type="button" onclick="setStatusFilter('검토중')">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" stroke-width="1.6"/><path d="M12 8v5l3 2" stroke-width="1.6" stroke-linecap="round"/></svg>
+        검토중만
+      </button>
+      <div class="right">
+        <span class="vbar"></span>
+        <div class="seg">
+          <button type="button" id="vCard" class="on" onclick="setView('card')">카드</button>
+          <button type="button" id="vList" onclick="setView('list')">목록</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="fpanel" id="filterPanel">
+      <div class="fp-col">
+        <label>소재 (Material)</label>
+        <select id="fmat" onchange="onFilterChange()"><option value="">소재 전체</option></select>
+      </div>
+      <div class="fp-col">
+        <label>상태 (Status)</label>
+        <select id="fsts" onchange="onFilterChange()"><option value="">상태 전체</option><option>확정</option><option>검토중</option></select>
+      </div>
+      <div class="fp-col">
+        <label>정렬 (Sort)</label>
+        <select id="sortBy" onchange="onFilterChange()">
+          <option value="recent">최근 등록순</option>
+          <option value="code">코드순</option>
+          <option value="box">보관장소순</option>
+          <option value="color">컬러명순</option>
+        </select>
+      </div>
+      <div class="fp-col">
+        <label>그룹 (Group)</label>
+        <select id="groupBy" onchange="onFilterChange()">
+          <option value="none">그룹 선택</option>
+          <option value="material">소재별</option>
+          <option value="product">제품별</option>
+          <option value="status">상태별</option>
+        </select>
+      </div>
+      <div class="fp-reset">
+        <button class="mini" type="button" onclick="resetFilters()">필터 초기화</button>
+      </div>
+
+    </div>
+
+    <div class="bulk" id="bulkRow" style="display:none">
+      <button class="mini" type="button" onclick="bulkLabels()">선택 라벨 출력 (<span id="selN">0</span>)</button>
+    </div>
+
+    <div id="grid" style="margin-top:16px"></div>
+    <div class="tbl" id="listWrap" style="display:none;margin-top:16px">
+      <table>
+        <thead><tr><th><input type="checkbox" onclick="selAll(this)"></th><th></th><th>CMF 코드</th><th>소재</th><th>컬러명</th><th>마감</th><th>광택</th><th>품번</th><th>단가</th><th>보관 장소</th><th>적용 제품</th><th>최근 수정</th><th>상태</th><th></th></tr></thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="empty" id="empty" style="display:none">조건에 맞는 CMF가 없습니다</div>
+
+    <div class="pager" id="pager">
+      <div class="info" id="pagerInfo"></div>
+      <div class="ctl">
+        <button class="mini" type="button" id="pgPrev" onclick="changePage(-1)">이전</button>
+        <span id="pgPos"></span>
+        <button class="mini" type="button" id="pgNext" onclick="changePage(1)">다음</button>
+        <div class="seg" id="pagesize">
+          <button type="button" data-n="10" onclick="setPageSize(10,this)">10</button>
+          <button type="button" data-n="30" class="on" onclick="setPageSize(30,this)">30</button>
+          <button type="button" data-n="60" onclick="setPageSize(60,this)">60</button>
+          <button type="button" data-n="90" onclick="setPageSize(90,this)">90</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="view" id="viewEntry">
+    <div class="head">
+      <div>
+        <h2><b>CMF</b><span>등록</span></h2>
+        <p class="lede">필수 항목만 입력하면 코드가 생성됩니다. 나머지는 아는 만큼만 적어주세요.</p>
+      </div>
+    </div>
+
+    <div class="card" style="padding:0;border:0;background:transparent;margin-top:18px">
+      <div class="strip">
+        <div class="lbl">생성될 코드</div>
+        <div class="code-row">
+          <div class="sg"><b id="csDate">··</b><span>년도</span></div><i>-</i>
+          <div class="sg"><b id="csMat" class="pend">··</b><span>소재</span></div><i>-</i>
+          <div class="sg"><b id="csCol" class="pend">··</b><span>컬러</span></div><i>-</i>
+          <div class="sg"><b id="csFin" class="pend">··</b><span>마감</span></div><i>-</i>
+          <div class="sg"><b id="csGlo" class="pend">··</b><span>광택</span></div><i>-</i>
+          <div class="sg"><b id="csSer" class="pend">··</b><span>순번</span></div>
+        </div>
+      </div>
+      <div class="strip-foot">점선 표시는 예상값입니다 — 컬러·기타 약어는 생성 시점에 사전을 조회해 확정되고, 순번은 같은 해 동일 사양이 있을 때 올라갑니다.</div>
+    </div>
+
+    <div class="card">
+      <section class="sec">
+        <div class="sec-h"><h3>필수 정보</h3><p>코드를 구성하는 항목입니다 · <em>*</em> 는 필수 입력</p></div>
+
+        <div class="grid6 one">
+          <div><label class="req">등록 날짜</label><input type="date" id="fDate" onchange="updateCodePreview()" oninput="updateCodePreview()">
+            <p class="hint">코드에는 연도 2자리만 들어갑니다.</p></div>
+        </div>
+
+        <div class="grid6">
+          <div>
+            <label class="req">소재</label>
+            <select id="fMat" onchange="etcSync()"></select>
+            <div id="etcMat" class="etc" style="display:none">
+              <label>기타 소재명 / 영문명</label>
+              <div class="pair"><input id="fMatEtc" placeholder="예: 세라믹"><input id="fMatEng" placeholder="예: CERAMIC" oninput="updateCodePreview()"></div>
+              <p class="hint">사전에 없는 항목입니다 — 등록하면 분류사전에 새로 추가됩니다.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid6 two">
+          <div><label class="req">컬러명 (국문)</label><input id="fCname" placeholder="예: 세이지 그린" oninput="updateCodePreview()"></div>
+          <div><label>컬러 영문명</label><input id="fCeng" placeholder="예: SAGE GREEN" oninput="updateCodePreview()">
+            <p class="hint">신규 컬러라면 꼭 적어주세요 — 코드 약어에 쓰입니다.</p></div>
+        </div>
+
+        <div class="grid6 two">
+          <div>
+            <label class="req">마감 (표면 질감)</label>
+            <select id="fFin" onchange="etcSync()"></select>
+            <div id="etcFin" class="etc" style="display:none">
+              <label>기타 마감명 / 영문명</label>
+              <div class="pair"><input id="fFinEtc" placeholder="예: 벨벳"><input id="fFinEng" placeholder="예: VELVET" oninput="updateCodePreview()"></div>
+              <p class="hint">사전에 없는 항목입니다 — 등록하면 분류사전에 새로 추가됩니다.</p>
+            </div>
+          </div>
+          <div>
+            <label class="req">광택</label>
+            <select id="fGlo" onchange="etcSync()"></select>
+            <div id="etcGlo" class="etc" style="display:none">
+              <label>기타 광택명 / 영문명</label>
+              <div class="pair"><input id="fGloEtc" placeholder="예: 진주광"><input id="fGloEng" placeholder="예: PEARL" oninput="updateCodePreview()"></div>
+              <p class="hint">사전에 없는 항목입니다 — 등록하면 분류사전에 새로 추가됩니다.</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="grid6 two">
+          <div><label class="req">대표 색상값 (HEX)</label>
+            <div class="pair"><input id="fHex" placeholder="#B7A99A"><input type="color" id="fPick" class="pick" value="#B7A99A" oninput="document.getElementById('fHex').value=this.value"></div>
+          </div>
+          <div><label>Pantone</label><input id="fPantone" placeholder="예: PANTONE 426C"></div>
+        </div>
+
+        <div class="grid6 two">
+          <div><label>부서명 (팀명)</label><input id="fDept" placeholder="예: 디자인팀"></div>
+          <div><label class="req">등록자 (담당)</label><input id="fBy" placeholder="이름"></div>
+        </div>
+
+        <div class="grid6 one">
+          <div><label class="req">상태</label><select id="fStatus"><option>확정</option><option>검토중</option></select></div>
+        </div>
+
+        <div class="fld" style="margin-top:18px">
+          <label class="req">실물 사진</label>
+          <div class="drop" data-drop>
+            <div class="thumb" id="fPhotoPrev"></div>
+            <div class="tx">
+              <b id="fPhotoName">사진을 끌어다 놓거나 클릭해 선택</b>
+              <span>휴대폰에서는 촬영·앨범 선택이 바로 열립니다. 등록 시 자동으로 리사이즈됩니다.</span>
+            </div>
+            <input type="file" id="fPhoto" accept="image/*" onchange="previewPhoto(this,'fPhotoPrev','fPhotoName')">
+          </div>
+        </div>
+      </section>
+
+      <section class="sec">
+        <div class="sec-h"><h3>추가 정보</h3><p>선택 항목 — 지금 몰라도 나중에 수정에서 채울 수 있습니다</p></div>
+        <div class="grid6 three">
+          <div><label>공급사</label><input id="fSup"></div>
+          <div><label>공급사 품번</label><input id="fSupcode" placeholder="예: LP317"></div>
+          <div><label>단가</label><input id="fPrice" type="number" step="1" placeholder="야드당 (원)"></div>
+        </div>
+        <div class="grid6 two">
+          <div><label>적용 제품</label><input id="fProd" list="productList" placeholder="예: 트리플체어 무빙">
+            <p class="hint">비워두면 '미정'으로 등록됩니다.</p></div>
+          <div><label>비고</label><input id="fNote"></div>
+        </div>
+        <datalist id="productList"></datalist>
+      </section>
+
+      <div class="bar">
+        <div class="t">코드 구성 요소(연도·소재·컬러·마감·광택)는 생성 후 변경할 수 없습니다.</div>
+        <button class="btn" type="button" id="submitBtn" onclick="register()">CMF 코드 생성</button>
+      </div>
+      <div class="result" id="result"></div>
+    </div>
+  </section>
+
+  <section class="view" id="viewRoom">
+    <div class="head">
+      <div>
+        <h2><b>샘플실</b><span>배치도</span></h2>
+        <p class="lede">실물 CMF 라이브러리의 소재별 보관 위치(A~J) 안내입니다. 도면은 분류사전 데이터와 자동으로 연동되며, <b>클릭</b>하면 크게 볼 수 있습니다.</p>
+      </div>
+    </div>
+    <div class="plan" id="planHost" onclick="openPlan()"></div>
+    <div class="legend" id="planLegend"></div>
+    <p class="hint" id="planNote" style="max-width:940px;margin:14px auto 0"></p>
+  </section>
+
+  <section class="view" id="viewWo">
+    <div class="head">
+      <div>
+        <h2><b>작업지시서</b><span>소재 추출</span></h2>
+        <p class="lede">디자인 작업지시서를 올리면 문서에서 소재·컬러·마감 정보를 찾아 등록 목록으로 정리합니다. 확인·수정 후 한 번에 등록하세요.</p>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="drop" data-drop>
+        <div class="thumb" id="woThumb">FILE</div>
+        <div class="tx">
+          <b id="woName">작업지시서를 끌어다 놓거나 클릭해 선택</b>
+          <span>PDF · PPTX · JPG / PNG — 파일은 서버로 전송되지 않고 브라우저에서 바로 읽습니다</span>
+        </div>
+        <input type="file" id="woFile" accept=".pdf,.pptx,.jpg,.jpeg,.png,application/pdf,image/*" onchange="woPick(this)">
+      </div>
+      <div class="bar">
+        <div class="t" id="woStatus">문서에서 HEX·Pantone 값과 사전에 등록된 소재·마감·광택 용어를 찾아 추출합니다. 결과는 반드시 확인 후 등록해주세요.</div>
+        <button class="btn" type="button" id="woBtn" onclick="woAnalyze()">분석 시작</button>
+      </div>
+    </div>
+
+    <div id="woResult" style="display:none">
+      <div class="card">
+        <div class="sec-h"><h3>공통 설정</h3><p>아래 모든 항목에 함께 적용됩니다</p></div>
+        <div class="grid6 three">
+          <div><label class="req">등록 날짜</label><input type="date" id="woDate"></div>
+          <div><label>부서명 (팀명)</label><input id="woDept" placeholder="예: 디자인팀"></div>
+          <div><label class="req">등록자 (담당)</label><input id="woBy" placeholder="이름"></div>
+        </div>
+        <div class="grid6 two">
+          <div><label>상태</label><select id="woSts"><option>검토중</option><option>확정</option></select>
+            <p class="hint">작업지시서 추출분은 실물 사진이 없으므로 기본값이 검토중입니다.</p></div>
+          <div><label>적용 제품</label><input id="woProd" list="productList" placeholder="예: 트리플체어 무빙">
+            <p class="hint">항목별로 따로 적지 않으면 이 값이 들어갑니다.</p></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="sec-h"><h3>추출 결과</h3><p id="woCount"></p></div>
+        <div id="woAlert"></div>
+        <div class="wo-split">
+          <div id="woItems"></div>
+          <aside class="wo-view">
+            <div class="wo-view-h">
+              <b>작업지시서</b>
+              <span style="flex:1"></span>
+              <button class="mini" type="button" onclick="woPage(-1)">이전</button>
+              <span id="woPg">–</span>
+              <button class="mini" type="button" onclick="woPage(1)">다음</button>
+            </div>
+            <div class="wo-canvas" id="woCanvas" onclick="woCanvasClick(event)">
+              <div class="wo-page">
+                <img id="woImg" alt="작업지시서 페이지">
+                <div class="wo-hl" id="woHl"></div>
+              </div>
+            </div>
+            <p class="hint" id="woViewHint">항목의 <b>위치 보기</b>를 누르면 문서에서 해당 줄을 표시합니다.</p>
+          </aside>
+        </div>
+        <div class="bar">
+          <div class="t">체크한 항목만 등록됩니다. 값은 직접 수정할 수 있습니다.</div>
+          <button class="btn" type="button" id="woReg" onclick="woRegister()">선택 항목 등록</button>
+        </div>
+        <div class="result" id="woOut"></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="ovl" id="planOvl" onclick="closePlan()">
+  <div class="ovl-box"><div class="plan" id="planHostBig"></div></div>
+</div>
+
+<div class="ovl" id="qrOvl">
+  <div class="ovl-box" style="width:380px;text-align:center">
+    <h2>QR 코드</h2>
+    <div class="code" id="qrCode" style="margin:8px 0 2px;cursor:default;overflow-wrap:anywhere"></div>
+    <div id="qrBox" style="display:flex;justify-content:center;align-items:center;margin:18px 0;min-height:196px"></div>
+    <p class="hint" style="margin-bottom:14px">스마트폰 카메라로 스캔하면 이 CMF의 상세 화면이 열립니다.</p>
+    <div class="ovl-btns" style="justify-content:center">
+      <button class="btn ghost" type="button" onclick="copyQrLink()">링크 복사</button>
+      <button class="btn" type="button" onclick="closeQr()">닫기</button>
+    </div>
+  </div>
+</div>
+
+<div class="ovl" id="editOvl">
+  <div class="ovl-box">
+    <h2>CMF 수정</h2>
+    <div class="lock">
+      <span class="code" id="eCode"></span><br>
+      <span id="eFixed"></span><br>
+      코드 구성 요소(소재·컬러·마감·광택)를 바꾸려면 삭제 후 재등록하세요.
+    </div>
+
+    <div class="grid6 two" style="margin-top:18px">
+      <div><label>등록 날짜</label><input type="date" id="eDate"></div>
+      <div><label>대표 색상값 (HEX)</label>
+        <div class="pair"><input id="eHex"><input type="color" id="ePick" class="pick" oninput="document.getElementById('eHex').value=this.value"></div>
+      </div>
+    </div>
+    <div class="grid6 two">
+      <div><label>Pantone</label><input id="ePantone"></div>
+      <div><label>상태</label><select id="eStatus"><option>확정</option><option>검토중</option></select></div>
+    </div>
+    <div class="grid6 two">
+      <div><label>공급사</label><input id="eSup"></div>
+      <div><label>공급사 품번</label><input id="eSupcode"></div>
+    </div>
+    <div class="grid6 two">
+      <div><label>단가</label><input id="ePrice" type="number" step="1" placeholder="야드당 (원)"></div>
+      <div><label>라이브러리 보관 장소</label><input id="eBox"></div>
+    </div>
+    <div class="grid6 two">
+      <div><label>부서명 (팀명)</label><input id="eDept" placeholder="예: 디자인팀"></div>
+      <div><label>수정자 (담당) — 이 저장에 대한 담당자</label><input id="eBy"></div>
+    </div>
+    <p class="hint" id="eMeta"></p>
+
+    <div class="fld" style="margin-top:18px">
+      <label>실물 사진</label>
+      <div class="drop" data-drop>
+        <div class="thumb" id="ePhotoPrev"></div>
+        <div class="tx">
+          <b id="ePhotoName">새 사진 선택 (선택 사항)</b>
+          <span>선택하면 기존 사진을 대체합니다. 비워두면 그대로 유지됩니다.</span>
+        </div>
+        <input type="file" id="ePhoto" accept="image/*" onchange="previewPhoto(this,'ePhotoPrev','ePhotoName')">
+      </div>
+    </div>
+
+    <div class="fld" style="margin-top:18px">
+      <label>적용 제품 (다중 등록 — 기존 이력은 유지되고 계속 추가됩니다)</label>
+      <div class="applied" id="eApplied"></div>
+      <div class="add-row">
+        <input id="eNewProd" list="productList" placeholder="추가할 제품명 입력">
+        <button class="mini" type="button" onclick="addProductToEdit()">추가</button>
+      </div>
+    </div>
+
+    <div class="fld" style="margin-top:18px">
+      <label>비고</label><textarea id="eNote" rows="2"></textarea>
+    </div>
+
+    <div class="ovl-btns">
+      <button class="mini danger" type="button" onclick="delFromModal()">삭제</button>
+      <span class="sp"></span>
+      <button class="btn ghost" type="button" onclick="closeEdit()">취소</button>
+      <button class="btn" type="button" id="saveBtn" onclick="saveEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div id="print-root"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+const OPENCODE = '<?!= initialCode ?>';
+const HOME_URL = '<?!= homeUrl ?>';
+let DATA = [], META = null, VIEW = 'card', readyCount = 0;
+let PAGE = 1, PAGE_SIZE = 30;
+const SEL = new Set();
+
+function $(id) { return document.getElementById(id); }
+
+
+function gsRun(fnName, ...args) {
+  return new Promise((resolve, reject) => {
+    google.script.run.withSuccessHandler(resolve).withFailureHandler(reject)[fnName](...args);
+  });
+}
+
+(function initTheme() {
+  const root = document.documentElement;
+  const stamped = root.getAttribute('data-theme');
+  if (stamped !== 'light' && stamped !== 'dark') {
+    applyTheme(window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark');
+  } else {
+    applyTheme(stamped);
+  }
+  $('themeBtn').addEventListener('click', function () {
+    const next = document.documentElement.getAttribute('data-theme') === 'light' ? 'dark' : 'light';
+    applyTheme(next);
+    try { google.script.run.setTheme(next); } catch (e) {}
+    try { localStorage.setItem('berex-cmf-theme', next); } catch (e) {}
+  });
+})();
+function applyTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  $('themeIco').textContent = t === 'light' ? '☀︎' : '☾︎';
+  $('themeLbl').textContent = t === 'light' ? 'Light' : 'Dark';
+}
+
+(function initHome() {
+  if (!HOME_URL || HOME_URL.indexOf('http') !== 0) return;
+  const a = $('homeLink');
+  a.href = HOME_URL;
+  a.style.display = '';
+})();
+
+google.script.run.withSuccessHandler(m => { META = m; initForm(); renderPlan(); ready(); }).getMeta();
+google.script.run.withSuccessHandler(rows => { DATA = rows; ready(); }).getArchiveData();
+google.script.run.withSuccessHandler(list => {
+  $('productList').innerHTML = list.map(p => `<option value="${escapeHtml(p)}">`).join('');
+}).getProductList();
+
+function ready() {
+  if (++readyCount < 2) return;
+  $('loading').style.display = 'none';
+  $('viewArchive').classList.add('on');
+  if (OPENCODE) $('q').value = OPENCODE;
+  if (META && META.sheetUrl) { const s = $('sheetLink'); s.href = META.sheetUrl; s.style.display = ''; }
+  initFilters(); draw();
+}
+function reload() {
+  google.script.run.withSuccessHandler(rows => { DATA = rows; initFilters(); draw(); }).getArchiveData();
+}
+function reloadMeta() {
+  google.script.run.withSuccessHandler(m => { META = m; initForm(); renderPlan(); initFilters(); }).getMeta();
+}
+
+function escapeHtml(s) {
+  return (s ?? '').toString().replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function showToast(msg) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.add('on');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('on'), 1800);
+}
+function copyCode(code, ev) {
+  if (ev) ev.stopPropagation();
+  navigator.clipboard.writeText(code).then(() => showToast('코드 복사됨: ' + code))
+    .catch(() => showToast('복사에 실패했습니다'));
+}
+function codeUrl(code) {
+  return (META && META.appUrl) ? META.appUrl + '?code=' + encodeURIComponent(code) : code;
+}
+
+document.querySelectorAll('.tabs .tab[data-view]').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.tabs .tab[data-view]').forEach(b => b.classList.toggle('on', b === btn));
+    const v = btn.getAttribute('data-view');
+    document.querySelectorAll('.view').forEach(p => p.classList.remove('on'));
+    $('view' + v.charAt(0).toUpperCase() + v.slice(1)).classList.add('on');
+    if (v === 'archive') draw();
+  });
+});
+
+function planSvg() {
+  const boxes = (META && META.boxes) ? META.boxes.slice(0, 10) : [];
+  const X0 = 130, W = 70, Y = 120, H = 90;
+  const cells = boxes.map((b, i) => {
+    const x = X0 + i * W;
+    return `<g transform="translate(${x}, ${Y})">
+      <rect class="pl-box" width="${W}" height="${H}"/>
+      <text class="pl-box-l" x="${W / 2}" y="38" text-anchor="middle">${escapeHtml(b.box)}</text>
+      <text class="pl-box-t" x="${W / 2}" y="62" text-anchor="middle">${escapeHtml(b.name)}</text>
+    </g>`;
+  }).join('');
+
+  return `
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 540" width="100%" height="100%">
+    <rect class="pl-sheet" x="12" y="12" width="936" height="516" rx="12" stroke-width="1.5"/>
+
+    <g class="pl-guide" stroke-width="1" stroke-dasharray="2,6">
+      <line x1="130" y1="120" x2="130" y2="450"/>
+      <line x1="480" y1="120" x2="480" y2="450"/>
+      <line x1="830" y1="120" x2="830" y2="450"/>
+    </g>
+
+    <g class="pl-dim" stroke-width="1.2">
+      <line x1="130" y1="58" x2="830" y2="58"/>
+      <line x1="130" y1="52" x2="130" y2="64"/>
+      <line x1="830" y1="52" x2="830" y2="64"/>
+    </g>
+    <rect class="pl-dim-b" x="448" y="44" width="64" height="24" rx="4" stroke-width="1"/>
+    <text class="pl-dim-t" x="480" y="60" text-anchor="middle">8.0 M</text>
+
+    <g class="pl-dim" stroke-width="1.2">
+      <line x1="68" y1="120" x2="68" y2="450"/>
+      <line x1="62" y1="120" x2="74" y2="120"/>
+      <line x1="62" y1="450" x2="74" y2="450"/>
+    </g>
+    <g transform="translate(52, 285) rotate(-90)">
+      <rect class="pl-dim-b" x="-30" y="-12" width="60" height="24" rx="4" stroke-width="1"/>
+      <text class="pl-dim-t" x="0" y="4" text-anchor="middle">3.5 M</text>
+    </g>
+
+    <g transform="translate(892, 300)">
+      <circle class="pl-n" cx="0" cy="0" r="16" stroke-width="1.2"/>
+      <line class="pl-n-x" x1="0" y1="-16" x2="0" y2="16" stroke-width="1"/>
+      <line class="pl-n-x" x1="-16" y1="0" x2="16" y2="0" stroke-width="1"/>
+      <polygon class="pl-n-p" points="0,-12 3,-2 -3,-2"/>
+      <text class="pl-n-t" x="0" y="27" text-anchor="middle">N</text>
+    </g>
+
+    <path class="pl-wall" d="M 830 360 L 830 120 L 130 120 L 130 450 L 830 450"
+          stroke-width="5" stroke-linejoin="miter" stroke-linecap="square"/>
+
+    <rect class="pl-band-a" x="130" y="88" width="350" height="26" rx="4" stroke-width="1"/>
+    <text class="pl-band-ta" x="305" y="105" text-anchor="middle">원단 CMF 라이브러리</text>
+    <rect class="pl-band-b" x="480" y="88" width="350" height="26" rx="4" stroke-width="1"/>
+    <text class="pl-band-tb" x="655" y="105" text-anchor="middle">사출 CMF 라이브러리</text>
+
+    ${cells}
+
+    <text class="pl-corridor" x="260" y="265">이 동 통 로</text>
+
+    ${[160, 298, 436, 574].map(x => `
+    <g transform="translate(${x}, 360)">
+      <rect class="pl-chair" width="118" height="70" rx="8" stroke-width="1.2"/>
+      <path class="pl-chair-b" d="M 15 15 H 103 V 22 C 103 26, 15 26, 15 22 Z"/>
+      <text class="pl-chair-t" x="59" y="48" text-anchor="middle">안마의자</text>
+    </g>`).join('')}
+
+    <g class="pl-zone" stroke-width="1.2">
+      <line x1="160" y1="472" x2="692" y2="472"/>
+      <line x1="160" y1="466" x2="160" y2="474"/>
+      <line x1="692" y1="466" x2="692" y2="474"/>
+    </g>
+    <text class="pl-zone-t" x="426" y="492" text-anchor="middle">안마의자 존</text>
+
+    <path class="pl-door" d="M 830 360 A 90 90 0 0 0 740 450" stroke-width="1.2" stroke-dasharray="3,3"/>
+    <text class="pl-door-t" x="765" y="396" text-anchor="middle">출입구</text>
+    <text class="pl-door-s" x="765" y="410" text-anchor="middle">(ENTRANCE)</text>
+  </svg>`;
+}
+
+function renderPlan() {
+  if (!META || !META.boxes || !META.boxes.length) return;
+  const svg = planSvg();
+  $('planHost').innerHTML = svg;
+  $('planHostBig').innerHTML = svg;
+  $('planLegend').innerHTML =
+    META.boxes.map(b => `<div><b>${escapeHtml(b.box)}</b><span>${escapeHtml(b.name)}</span></div>`).join('');
+  const extra = META.boxes.slice(10);
+  $('planNote').innerHTML = extra.length
+    ? `방에는 선반이 10칸(A~J)뿐이라 <b>${escapeHtml(extra.map(b => b.box + ' ' + b.name).join(' · '))}</b> 는 도면에 자리가 없습니다 — 보관 위치를 정하면 알려주세요.`
+    : '';
+}
+function openPlan() { $('planOvl').classList.add('on'); }
+function closePlan() { $('planOvl').classList.remove('on'); }
+
+function initForm() {
+  $('fMat').innerHTML = '<option value="">소재 선택</option>' +
+    META.materials.map(m => `<option value="${m.code}">${escapeHtml(m.name)}</option>`).join('') +
+    '<option value="__etc">기타 (직접 입력)</option>';
+  $('fGlo').innerHTML = '<option value="">광택 선택</option>' +
+    META.glosses.map(g => `<option value="${g.code}">${escapeHtml(g.name)}</option>`).join('') +
+    '<option value="__etc">기타 (직접 입력)</option>';
+  $('fFin').innerHTML = '<option value="">마감 선택</option>' +
+    META.finishes.map(f => `<option value="${f.code}">${escapeHtml(f.name)}</option>`).join('') +
+    '<option value="__etc">기타 (직접 입력)</option>';
+
+  if (!$('fDate').value) $('fDate').value = todayISO();
+  if (!$('woDate').value) $('woDate').value = todayISO();
+  etcSync();
+}
+function todayISO() {
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' })
+    .format(new Date());
+}
+function codeYY() {
+  const v = ($('fDate').value || '').trim() || todayISO();
+  const m = /^(\d{4})-\d{2}-\d{2}$/.exec(v);
+  return m ? m[1].slice(2) : '··';
+}
+function setSeg(id, val, provisional) {
+  const el = $(id);
+  el.textContent = val || '··';
+  el.classList.toggle('pend', !val);
+  el.classList.toggle('prov', !!val && !!provisional);
+}
+function guessAbbr(eng) {
+  const clean = String(eng || '').toUpperCase().replace(/[^A-Z\s]/g, '').trim();
+  if (!clean) return '';
+  const w = clean.split(/\s+/).filter(Boolean);
+  if (w.length >= 2) return w[0][0] + w[1][0];
+  return w[0].length >= 2 ? w[0].slice(0, 2) : '';
+}
+function updateCodePreview() {
+  const v = id => ($(id).value || '').trim();
+  const two = s => {
+    const t = String(s).toUpperCase().replace(/[^A-Z0-9]/g, '');
+    return t ? (t + '··').slice(0, 2) : '';
+  };
+  setSeg('csDate', codeYY());
+  const m = v('fMat'), f = v('fFin'), g = v('fGlo');
+  setSeg('csMat', m === '__etc' ? guessAbbr(v('fMatEng')) : two(m), m === '__etc');
+  setSeg('csFin', f === '__etc' ? guessAbbr(v('fFinEng')) : two(f), f === '__etc');
+  setSeg('csGlo', g === '__etc' ? guessAbbr(v('fGloEng')) : two(g), g === '__etc');
+  let eng = v('fCeng');
+  const cname = v('fCname');
+  if (!eng && /^[a-zA-Z\s]+$/.test(cname)) eng = cname;
+  setSeg('csCol', guessAbbr(eng), true);
+}
+function etcSync() {
+  $('etcMat').style.display = $('fMat').value === '__etc' ? 'block' : 'none';
+  $('etcFin').style.display = $('fFin').value === '__etc' ? 'block' : 'none';
+  $('etcGlo').style.display = $('fGlo').value === '__etc' ? 'block' : 'none';
+  ['fMat', 'fFin', 'fGlo'].forEach(id => {
+    const el = $(id);
+    el.style.color = el.value ? '' : 'var(--ink-faint)';
+  });
+  updateCodePreview();
+}
+
+function initFilters() {
+  const fm = $('fmat'), cur = fm.value;
+  const mats = [], seen = new Set();
+  const add = n => { if (n && !seen.has(n)) { mats.push(n); seen.add(n); } };
+  if (META && META.boxes) META.boxes.forEach(b => add(b.name));
+  if (META && META.materials) META.materials.forEach(m => add(m.name));
+  DATA.forEach(r => add(r.mat));
+  fm.innerHTML = '<option value="">소재 전체</option>' + mats.map(m => `<option>${escapeHtml(m)}</option>`).join('');
+  fm.value = cur;
+}
+function setView(v) {
+  VIEW = v;
+  $('vCard').classList.toggle('on', v === 'card');
+  $('vList').classList.toggle('on', v === 'list');
+  $('bulkRow').style.display = v === 'list' ? 'flex' : 'none';
+  draw();
+}
+function setStatusFilter(v) {
+  $('fsts').value = v;
+  $('filterPanel').classList.add('on');
+  $('filterToggle').classList.add('on');
+  PAGE = 1; draw(); updateFilterBadge();
+}
+function resetFilters() {
+  $('q').value = ''; $('fmat').value = ''; $('fsts').value = '';
+  $('sortBy').value = 'recent'; $('groupBy').value = 'none';
+  PAGE = 1; draw(); updateFilterBadge();
+}
+function toggleFilterPanel() {
+  const on = $('filterPanel').classList.toggle('on');
+  $('filterToggle').classList.toggle('on', on);
+}
+function updateFilterBadge() {
+  const n = (['fmat', 'fsts', 'groupBy'].filter(id => $(id).value && $(id).value !== 'none').length);
+  const badge = $('filterActiveN');
+  badge.textContent = n;
+  badge.style.display = n ? 'inline-block' : 'none';
+  $('filterToggle').classList.toggle('on', n > 0 || $('filterPanel').classList.contains('on'));
+}
+
+function previewPhoto(input, prevId, nameId) {
+  const file = input.files[0];
+  if (!file) return;
+  $(nameId).textContent = file.name;
+  const reader = new FileReader();
+  reader.onload = e => { $(prevId).style.backgroundImage = `url('${e.target.result}')`; };
+  reader.readAsDataURL(file);
+}
+function resetPhoto(inputId, prevId, nameId, label) {
+  $(inputId).value = '';
+  $(prevId).style.backgroundImage = '';
+  $(nameId).textContent = label;
+}
+document.querySelectorAll('[data-drop]').forEach(zone => {
+  const input = zone.querySelector('input[type=file]');
+  ['dragenter', 'dragover'].forEach(t => zone.addEventListener(t, e => { e.preventDefault(); zone.classList.add('over'); }));
+  ['dragleave', 'drop'].forEach(t => zone.addEventListener(t, () => zone.classList.remove('over')));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    if (!e.dataTransfer.files.length) return;
+    input.files = e.dataTransfer.files;
+    input.dispatchEvent(new Event('change'));
+  });
+});
+function compressImage(file, maxDim = 900) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const reader = new FileReader();
+    reader.onload = e => { img.src = e.target.result; };
+    reader.onerror = reject;
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > height && width > maxDim) { height = height * maxDim / width; width = maxDim; }
+      else if (height > maxDim) { width = width * maxDim / height; height = maxDim; }
+      const canvas = document.createElement('canvas');
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      resolve({ base64: canvas.toDataURL('image/jpeg', 0.82).split(',')[1], mimeType: 'image/jpeg' });
+    };
+    img.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+async function uploadPhotoIfAny(inputId, prefix) {
+  const input = $(inputId);
+  const file = input.files && input.files[0];
+  if (!file) return '';
+  const { base64, mimeType } = await compressImage(file);
+  const res = await gsRun('uploadPhoto', base64, mimeType, prefix + '_' + Date.now() + '.jpg');
+  return res.url;
+}
+
+async function register() {
+  const g = id => $(id).value.trim();
+  let hex = g('fHex'); if (hex && !hex.startsWith('#')) hex = '#' + hex;
+  const res = $('result');
+  const show = (cls, html) => {
+    res.style.display = 'block'; res.className = 'result ' + cls; res.innerHTML = html;
+    res.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
+  if (!g('fDate')) { show('err', '등록 날짜를 선택해주세요.'); return; }
+  if (!g('fMat')) { show('err', '소재를 선택해주세요.'); return; }
+  if (!g('fCname')) { show('err', '컬러명(국문)을 입력해주세요.'); return; }
+  if (!g('fFin')) { show('err', '마감을 선택해주세요.'); return; }
+  if (!g('fGlo')) { show('err', '광택을 선택해주세요.'); return; }
+  if (!/^#[0-9a-fA-F]{6}$/.test(hex)) { show('err', '올바른 HEX 값(#RRGGBB)을 입력해주세요.'); return; }
+  if (g('fMat') === '__etc' && !g('fMatEtc')) { show('err', '기타 소재명을 입력해주세요.'); return; }
+  if (g('fFin') === '__etc' && !g('fFinEtc')) { show('err', '기타 마감명을 입력해주세요.'); return; }
+  if (g('fGlo') === '__etc' && !g('fGloEtc')) { show('err', '기타 광택명을 입력해주세요.'); return; }
+  if (!g('fBy')) { show('err', '등록자(담당)를 입력해주세요.'); return; }
+  if (!$('fPhoto').files.length) { show('err', '실물 사진을 첨부해주세요.'); return; }
+
+  const payload = {
+    date: g('fDate'),
+    material: g('fMat'), materialEtc: g('fMatEtc'), materialEtcEng: g('fMatEng'),
+    gloss: g('fGlo'), glossEtc: g('fGloEtc'), glossEtcEng: g('fGloEng'),
+    status: g('fStatus'),
+    colorName: g('fCname'), colorEng: g('fCeng'),
+    finishCode: g('fFin'), finishEtc: g('fFinEtc'), finishEtcEng: g('fFinEng'),
+    hex: hex, pantone: g('fPantone'),
+    supplier: g('fSup'), supplierCode: g('fSupcode'),
+    price: g('fPrice'),
+    product: g('fProd') || '미정', by: g('fBy'), dept: g('fDept'), note: g('fNote')
+  };
+
+  const btn = $('submitBtn');
+  btn.disabled = true; btn.textContent = '사진 업로드 중…';
+  try {
+    try { payload.photo = await uploadPhotoIfAny('fPhoto', 'cmf'); }
+    catch (photoErr) { payload.photo = ''; }
+
+    btn.textContent = '생성 중…';
+    const r = await gsRun('submitEntry', payload);
+    btn.disabled = false; btn.textContent = 'CMF 코드 생성';
+
+    show(r.status === '검토중' ? 'review' : '',
+      `<div class="rcode">${r.code}</div>` +
+      `${escapeHtml(r.matName)} · ${escapeHtml(r.colorName)} · ${escapeHtml(r.finishName)} · ${escapeHtml(r.glossName)} · ${r.serial}번 — <b>${r.status}</b>` +
+      `<br>라이브러리 보관 장소 <b>${r.box}</b> — 자동 지정` +
+      (parseInt(r.serial, 10) > 1 ? `<br>같은 해 동일 사양 등록 존재 → 순번 ${r.serial} 부여` : '') +
+      (r.colorIsNew ? `<br>신규 컬러 — 약어 ${r.abbr} 자동 생성` : '') +
+      (r.matIsNew ? `<br>신규 소재 — 코드 ${r.matCode} 생성` : '') +
+      (r.finishIsNew ? `<br>신규 마감 — 코드 ${r.finishCode} 생성` : '') +
+      (r.glossIsNew ? `<br>신규 광택 — 코드 ${r.glossCode} 생성` : '') +
+      `<div style="margin-top:16px;display:flex;gap:8px;flex-wrap:wrap">
+         <button class="btn" type="button" onclick="printLabels(['${r.code}'])">QR 스티커 출력</button>
+         <button class="btn ghost" type="button" onclick="showQr('${r.code}')">QR 보기</button>
+       </div>`);
+
+    ['fCname','fCeng','fPantone','fSup','fSupcode','fPrice','fProd','fNote',
+     'fFinEtc','fFinEng','fMatEtc','fMatEng','fGloEtc','fGloEng'].forEach(i => $(i).value = '');
+    ['fMat','fFin','fGlo'].forEach(i => $(i).value = '');
+    resetPhoto('fPhoto', 'fPhotoPrev', 'fPhotoName', '사진을 끌어다 놓거나 클릭해 선택');
+    etcSync();
+    reload();
+    if (r.matIsNew || r.finishIsNew || r.glossIsNew) reloadMeta();
+  } catch (err) {
+    btn.disabled = false; btn.textContent = 'CMF 코드 생성';
+    show('err', '등록 실패: ' + (err.message || err));
+  }
+}
+
+const CDN = {
+  pdf:    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js',
+  pdfWkr: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js',
+  zip:    'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js',
+  ocr:    'https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/5.1.0/tesseract.min.js'
+};
+let WO_ITEMS = [], WO_FILE = null, WO_DOC = { lines: [], pages: [] }, WO_PAGE = 0, WO_EYE = -1;
+
+function loadScript(src) {
+  return new Promise((resolve, reject) => {
+    if (document.querySelector(`script[src="${src}"]`)) return resolve();
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = () => resolve();
+    s.onerror = () => reject(new Error('외부 라이브러리를 불러오지 못했습니다 (사내망에서 cdnjs.cloudflare.com 차단 여부 확인)'));
+    document.head.appendChild(s);
+  });
+}
+function woSay(msg) { $('woStatus').innerHTML = msg; }
+
+async function ensurePdfJs() {
+  await loadScript(CDN.pdf);
+  if (pdfjsLib.GlobalWorkerOptions.workerSrc) return;
+  try {
+    const src = await (await fetch(CDN.pdfWkr)).text();
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      URL.createObjectURL(new Blob([src], { type: 'application/javascript' }));
+  } catch (e) {
+    pdfjsLib.GlobalWorkerOptions.workerSrc = CDN.pdfWkr;
+  }
+}
+
+async function pdfExtract(file, render) {
+  await ensurePdfJs();
+  const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const lines = [], pages = [];
+  const canRender = render && doc.numPages <= 20;
+
+  for (let p = 1; p <= doc.numPages; p++) {
+    if (doc.numPages > 3) woSay(`문서를 읽는 중… ${p} / ${doc.numPages} 페이지`);
+    const page = await doc.getPage(p);
+    const vp1 = page.getViewport({ scale: 1 });
+    const tc = await page.getTextContent();
+
+    const rows = {};
+    tc.items.forEach(it => {
+      const y = Math.round(it.transform[5]);
+      const x = it.transform[4];
+      const r = rows[y] || (rows[y] = { parts: [], x0: 1e9, x1: -1e9, y: y, h: 10 });
+      r.parts.push(it.str);
+      r.x0 = Math.min(r.x0, x);
+      r.x1 = Math.max(r.x1, x + (it.width || 0));
+      r.h = Math.max(r.h, it.height || 10);
+    });
+    Object.keys(rows).map(Number).sort((a, b) => b - a).forEach(y => {
+      const r = rows[y];
+      const text = r.parts.join(' ').replace(/\s+/g, ' ').trim();
+      if (!text) return;
+      lines.push({
+        text: text, page: p,
+        nx0: Math.max(0, r.x0 / vp1.width),
+        nx1: Math.min(1, r.x1 / vp1.width),
+        ny0: Math.max(0, (vp1.height - (r.y + r.h)) / vp1.height),
+        ny1: Math.min(1, (vp1.height - r.y + 3) / vp1.height)
+      });
+    });
+
+    if (canRender) {
+      const vp = page.getViewport({ scale: Math.min(2, 1100 / vp1.width) });
+      const cv = document.createElement('canvas');
+      cv.width = vp.width; cv.height = vp.height;
+      await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+      pages.push({ n: p, url: cv.toDataURL('image/jpeg', 0.92) });
+    }
+  }
+  return { lines, pages, total: doc.numPages };
+}
+
+async function pdfOcrExtract(file, maxPages = 5) {
+  await ensurePdfJs();
+  await loadScript(CDN.ocr);
+  const doc = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  const n = Math.min(doc.numPages, maxPages);
+  const lines = [], pages = [];
+  for (let p = 1; p <= n; p++) {
+    woSay(`OCR 진행 중… ${p} / ${n} 페이지`);
+    const page = await doc.getPage(p);
+    const vp = page.getViewport({ scale: 2 });
+    const cv = document.createElement('canvas');
+    cv.width = vp.width; cv.height = vp.height;
+    await page.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+    const r = await Tesseract.recognize(cv, 'kor+eng');
+    (r.data.lines || []).forEach(l => {
+      const t = (l.text || '').replace(/\s+/g, ' ').trim();
+      if (!t) return;
+      lines.push({ text: t, page: p,
+        nx0: l.bbox.x0 / cv.width, nx1: l.bbox.x1 / cv.width,
+        ny0: l.bbox.y0 / cv.height, ny1: l.bbox.y1 / cv.height });
+    });
+    pages.push({ n: p, url: cv.toDataURL('image/jpeg', 0.92) });
+  }
+  return { lines, pages, total: doc.numPages, ocrPages: n };
+}
+
+function xmlDecode(s) {
+  return s.replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"')
+          .replace(/&apos;/g, "'").replace(/&amp;/g, '&');
+}
+async function pptxExtract(file) {
+  await loadScript(CDN.zip);
+  const zip = await JSZip.loadAsync(file);
+  const names = Object.keys(zip.files)
+    .filter(n => /^ppt\/(slides|notesSlides)\/[^/]+\.xml$/.test(n))
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  if (!names.length) throw new Error('슬라이드를 찾지 못했습니다. 구형 .ppt 라면 .pptx 로 다시 저장해 올려주세요.');
+  const out = [];
+  for (const n of names) {
+    const no = parseInt((n.match(/(\d+)\.xml$/) || [])[1], 10) || 1;
+    const xml = await zip.file(n).async('string');
+    xml.split('</a:p>').forEach(par => {
+      const t = (par.match(/<a:t>([^<]*)<\/a:t>/g) || [])
+        .map(x => xmlDecode(x.replace(/<\/?a:t>/g, ''))).join(' ').replace(/\s+/g, ' ').trim();
+      if (t) out.push({ text: t, page: no });
+    });
+  }
+  return { lines: out, pages: [], total: names.length };
+}
+
+async function imageExtract(file) {
+  await loadScript(CDN.ocr);
+  woSay('이미지 OCR 진행 중… 30초 이상 걸릴 수 있습니다.');
+  const url = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsDataURL(file); });
+  const r = await Tesseract.recognize(file, 'kor+eng');
+  const dim = await new Promise(res => { const im = new Image(); im.onload = () => res({ w: im.width, h: im.height }); im.src = url; });
+  const lines = (r.data.lines || []).map(l => ({
+    text: (l.text || '').replace(/\s+/g, ' ').trim(), page: 1,
+    nx0: l.bbox.x0 / dim.w, nx1: l.bbox.x1 / dim.w,
+    ny0: l.bbox.y0 / dim.h, ny1: l.bbox.y1 / dim.h
+  })).filter(l => l.text);
+  return { lines, pages: [{ n: 1, url: url }], total: 1 };
+}
+
+function woPick(input) {
+  const f = input.files && input.files[0];
+  if (!f) return;
+  WO_FILE = f;
+  $('woName').textContent = f.name;
+  $('woThumb').textContent = (f.name.split('.').pop() || 'FILE').toUpperCase().slice(0, 4);
+  woSay(Math.round(f.size / 1024) + 'KB · 분석 시작을 눌러주세요.');
+}
+
+async function woAnalyze(forceOcr) {
+  const btn = $('woBtn');
+  if (!WO_FILE) { woSay('먼저 작업지시서 파일을 선택해주세요.'); return; }
+  const ext = WO_FILE.name.toLowerCase().split('.').pop();
+  btn.disabled = true; btn.textContent = '분석 중…';
+  woSay('문서에서 글자를 읽는 중입니다…');
+
+  try {
+    let doc;
+    if (ext === 'pdf') {
+      doc = forceOcr ? await pdfOcrExtract(WO_FILE) : await pdfExtract(WO_FILE, true);
+    } else if (ext === 'pptx') {
+      doc = await pptxExtract(WO_FILE);
+    } else if (ext === 'ppt') {
+      throw new Error('구형 .ppt 형식은 읽을 수 없습니다. PowerPoint에서 .pptx 또는 PDF로 저장해 올려주세요.');
+    } else if (/^(jpg|jpeg|png)$/.test(ext)) {
+      doc = await imageExtract(WO_FILE);
+    } else {
+      throw new Error('PDF · PPTX · JPG · PNG만 지원합니다.');
+    }
+
+    const text = doc.lines.map(l => l.text).join('\n');
+    if (text.replace(/\s/g, '').length < 20) {
+      if (ext === 'pdf' && !forceOcr) {
+        woSay('이 PDF에는 글자 정보가 없습니다 (스캔·이미지로 만든 문서로 보입니다).<br>' +
+              '<button class="mini" type="button" style="margin-top:8px" onclick="woAnalyze(true)">이미지 OCR로 다시 시도</button>');
+        btn.disabled = false; btn.textContent = '분석 시작';
+        return;
+      }
+      throw new Error('문서에서 글자를 찾지 못했습니다.');
+    }
+
+    woSay('찾은 글자를 정리하는 중…');
+    const r = await gsRun('parseWorkOrderText', text, WO_FILE.name);
+    WO_DOC = doc;
+    WO_ITEMS = r.items || [];
+
+    if (!WO_ITEMS.length) {
+      woSay(`글자 ${r.chars}자를 읽었지만 CMF 후보를 찾지 못했습니다.<br>` +
+            'HEX 값(#RRGGBB)이나 사전에 등록된 소재·컬러 이름이 문서에 있어야 인식됩니다.<br>' +
+            '<span style="color:var(--warn)">(이 미리보기는 후보 인식 로직을 흉내내지 않습니다 — 텍스트 추출까지만 실제 동작합니다.)</span>');
+      $('woResult').style.display = 'none';
+    } else {
+      woSay(`${escapeHtml(r.fileName)} · 글자 ${r.chars}자에서 ${WO_ITEMS.length}건을 찾았습니다.`);
+      woRenderItems(WO_ITEMS);
+      woInitViewer();
+      $('woResult').style.display = 'block';
+      $('woResult').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  } catch (err) {
+    woSay('분석 실패: ' + escapeHtml(err.message || String(err)));
+    $('woResult').style.display = 'none';
+  }
+  btn.disabled = false; btn.textContent = '분석 시작';
+}
+
+function woLineOf(i) {
+  const it = WO_ITEMS[i];
+  return (it && WO_DOC.lines && WO_DOC.lines[it.li]) || null;
+}
+function woMissing(i) {
+  const g = id => ($(id) || {}).value || '';
+  const miss = [];
+  if (!g('woMat' + i)) miss.push('소재');
+  if (!g('woFin' + i)) miss.push('마감');
+  if (!g('woGlo' + i)) miss.push('광택');
+  if (!g('woCname' + i)) miss.push('컬러명');
+  if (!/^#[0-9a-fA-F]{6}$/.test(g('woHex' + i).trim())) miss.push('색상값');
+  return miss;
+}
+function woInitViewer() {
+  const pg = WO_DOC.pages || [];
+  const canvas = $('woCanvas');
+  if (!pg.length) {
+    canvas.innerHTML = '<div class="wo-none">이 형식은 미리보기 이미지를 만들 수 없습니다.<br>' +
+      '각 항목에 표시된 <b>페이지·줄 번호</b>로 원본에서 찾아주세요.</div>';
+    $('woPg').textContent = '–';
+    $('woViewHint').textContent = 'PDF나 이미지로 올리면 문서를 나란히 보며 확인할 수 있습니다.';
+    return;
+  }
+  WO_PAGE = 0;
+  woShowPage(0);
+}
+function woShowPage(idx) {
+  const pg = WO_DOC.pages || [];
+  if (!pg.length) return;
+  WO_PAGE = Math.max(0, Math.min(pg.length - 1, idx));
+  $('woImg').src = pg[WO_PAGE].url;
+  $('woPg').textContent = `${pg[WO_PAGE].n} / ${WO_DOC.total}`;
+  $('woHl').style.display = 'none';
+}
+function woPage(d) { woShowPage(WO_PAGE + d); }
+
+function woLocate(i, ev) {
+  if (ev) ev.preventDefault();
+  const ln = woLineOf(i);
+  document.querySelectorAll('.woi').forEach((el, k) => el.classList.toggle('active', k === i));
+  if (!ln) { showToast('이 항목의 위치 정보를 찾지 못했습니다'); return; }
+
+  const pages = WO_DOC.pages || [];
+  const pi = pages.findIndex(p => p.n === ln.page);
+  if (pi < 0 || ln.nx0 === undefined) {
+    showToast(`원본 ${ln.page}페이지에서 "${ln.text.slice(0, 24)}" 를 찾아주세요`);
+    return;
+  }
+  woShowPage(pi);
+  const hl = $('woHl');
+  hl.style.display = 'block';
+  hl.style.left = (ln.nx0 * 100) + '%';
+  hl.style.top = (ln.ny0 * 100) + '%';
+  hl.style.width = Math.max(0.5, (ln.nx1 - ln.nx0) * 100) + '%';
+  hl.style.height = Math.max(0.8, (ln.ny1 - ln.ny0) * 100) + '%';
+  const box = $('woCanvas');
+  setTimeout(() => { box.scrollTop = Math.max(0, hl.offsetTop - box.clientHeight / 2); }, 60);
+  $('woViewHint').innerHTML = `항목 ${i + 1} — <b>${ln.page}페이지</b> 표시 중`;
+}
+
+function woPickColor(i, ev) {
+  if (ev) ev.preventDefault();
+  if (!(WO_DOC.pages || []).length) { showToast('이 형식은 색상 추출을 지원하지 않습니다'); return; }
+  WO_EYE = i;
+  woLocate(i);
+  $('woCanvas').classList.add('eye');
+  $('woViewHint').innerHTML =
+    `<b style="color:var(--accent-ink)">항목 ${i + 1}</b> — 문서에서 색상 부분을 클릭하세요. (취소: 다시 색 추출 누르기)`;
+}
+function woCanvasClick(ev) {
+  const box = $('woCanvas');
+  if (WO_EYE < 0 || !box.classList.contains('eye')) return;
+  const img = $('woImg');
+  const r = img.getBoundingClientRect();
+  const x = Math.round((ev.clientX - r.left) / r.width * img.naturalWidth);
+  const y = Math.round((ev.clientY - r.top) / r.height * img.naturalHeight);
+  if (x < 0 || y < 0 || x >= img.naturalWidth || y >= img.naturalHeight) return;
+
+  const cv = document.createElement('canvas');
+  cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+  cv.getContext('2d').drawImage(img, 0, 0);
+  const s = 3, x0 = Math.max(0, x - 1), y0 = Math.max(0, y - 1);
+  const d = cv.getContext('2d').getImageData(x0, y0, s, s).data;
+  let R = 0, G = 0, B = 0, n = 0;
+  for (let k = 0; k < d.length; k += 4) { R += d[k]; G += d[k + 1]; B += d[k + 2]; n++; }
+  const hex = '#' + [R, G, B].map(v => Math.round(v / n).toString(16).padStart(2, '0')).join('').toUpperCase();
+
+  const i = WO_EYE;
+  $('woHex' + i).value = hex;
+  const pick = $('woPick' + i);
+  if (pick) pick.value = hex;
+  woSyncSwatch(i);
+  WO_EYE = -1;
+  box.classList.remove('eye');
+  $('woViewHint').innerHTML = `항목 ${i + 1} 색상값을 <b>${hex}</b> 로 채웠습니다.`;
+  showToast('색상 추출: ' + hex);
+}
+
+function woOptions(list, sel, placeholder) {
+  return `<option value="">${placeholder}</option>` +
+    list.map(o => `<option value="${o.code}"${o.code === sel ? ' selected' : ''}>${escapeHtml(o.name)}</option>`).join('');
+}
+
+function woRenderItems(items) {
+  $('woCount').textContent = items.length + '건을 찾았습니다 — 값을 확인하고 수정해주세요';
+  $('woItems').innerHTML = items.map((it, i) => {
+    const ln = (WO_DOC.lines || [])[it.li] || null;
+    const loc = ln ? `${ln.page}페이지 · ${it.li + 1}번째 줄` : '위치 정보 없음';
+    const hexNote = it.hexFrom === 'dict' ? ' <b>(컬러사전에서 자동 적용)</b>' : '';
+    return `
+    <div class="woi" id="woRow${i}">
+      <input class="chk" type="checkbox" id="woOn${i}" checked>
+      <div class="sq" id="woSw${i}" style="background:${escapeHtml(it.hex || 'transparent')}"></div>
+      <div class="f">
+        <div class="woh">
+          <span class="n">항목 ${i + 1}</span>
+          <span class="loc">${escapeHtml(loc)}</span>
+          <span id="woWarn${i}"></span>
+          <span style="flex:1"></span>
+          <button class="mini" type="button" onclick="woLocate(${i},event)">위치 보기</button>
+          <button class="mini" type="button" onclick="woPickColor(${i},event)">색 추출</button>
+        </div>
+        <div class="grid6 three">
+          <div><label class="req">소재</label><select id="woMat${i}" onchange="woCheck(${i})">${woOptions(META.materials, it.matCode, '소재 선택')}</select></div>
+          <div><label class="req">마감</label><select id="woFin${i}" onchange="woCheck(${i})">${woOptions(META.finishes, it.finCode, '마감 선택')}</select></div>
+          <div><label class="req">광택</label><select id="woGlo${i}" onchange="woCheck(${i})">${woOptions(META.glosses, it.gloCode, '광택 선택')}</select></div>
+        </div>
+        <div class="grid6 three">
+          <div><label class="req">컬러명 (국문)</label><input id="woCname${i}" value="${escapeHtml(it.colorName)}" placeholder="예: 세이지 그린" oninput="woCheck(${i})"></div>
+          <div><label>컬러 영문명</label><input id="woCeng${i}" value="${escapeHtml(it.colorEng)}" placeholder="예: SAGE GREEN"></div>
+          <div><label class="req">색상값 (HEX)</label>
+            <div class="pair"><input id="woHex${i}" value="${escapeHtml(it.hex)}" placeholder="#B7A99A" oninput="woSyncSwatch(${i});woCheck(${i})"><input type="color" id="woPick${i}" class="pick" value="${/^#[0-9a-fA-F]{6}$/.test(it.hex) ? it.hex : '#cccccc'}" oninput="document.getElementById('woHex${i}').value=this.value;woSyncSwatch(${i});woCheck(${i})"></div>
+            <p class="hint">문서에 색이 없으면 <b>색 추출</b>로 원본에서 찍어올 수 있습니다.${hexNote}</p>
+          </div>
+        </div>
+        <div class="grid6 three">
+          <div><label>Pantone</label><input id="woPantone${i}" value="${escapeHtml(it.pantone)}"></div>
+          <div><label>공급사 품번</label><input id="woSupcode${i}" value="${escapeHtml(it.supcode)}"></div>
+          <div><label>적용 제품</label><input id="woProd${i}" list="productList" value="${escapeHtml(it.product)}" placeholder="비우면 공통 설정 값"></div>
+        </div>
+        ${it.source ? `<div class="wosrc">원문: ${escapeHtml(it.source)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  items.forEach((_, i) => woCheck(i, true));
+  woUpdateAlert();
+}
+
+function woCheck(i, silent) {
+  const miss = woMissing(i);
+  const row = $('woRow' + i), tag = $('woWarn' + i);
+  if (!row || !tag) return;
+  row.classList.toggle('warn', miss.length > 0);
+  tag.innerHTML = miss.length ? `<span class="miss">확인 필요 · ${escapeHtml(miss.join(', '))}</span>` : '';
+  if (!silent) woUpdateAlert();
+}
+function woUpdateAlert() {
+  const box = $('woAlert');
+  const bad = [];
+  WO_ITEMS.forEach((it, i) => { if (woMissing(i).length) bad.push(i); });
+  if (!bad.length) { box.className = ''; box.innerHTML = ''; return; }
+  box.className = 'wo-alert';
+  box.innerHTML = `<b>확인이 필요한 항목 ${bad.length}건</b>` +
+    '문서에서 값을 찾지 못했습니다. 아래를 눌러 원본 위치로 이동하세요.<br>' +
+    bad.map(i => {
+      const ln = (WO_DOC.lines || [])[WO_ITEMS[i].li];
+      const where = ln ? `${ln.page}p · ${i + 1}번` : `${i + 1}번`;
+      return `<a onclick="woJump(${i})">${escapeHtml(where)}</a>`;
+    }).join('');
+}
+function woSyncSwatch(i) {
+  const v = ($('woHex' + i).value || '').trim();
+  const sw = $('woSw' + i);
+  if (sw && /^#[0-9a-fA-F]{6}$/.test(v)) sw.style.background = v;
+}
+function woJump(i) {
+  const row = $('woRow' + i);
+  if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  woLocate(i);
+}
+
+async function woRegister() {
+  const out = $('woOut');
+  const show = (cls, html) => { out.style.display = 'block'; out.className = 'result ' + cls; out.innerHTML = html; };
+  const g = id => ($(id).value || '').trim();
+
+  if (!g('woDate')) { show('err', '등록 날짜를 선택해주세요.'); return; }
+  if (!g('woBy')) { show('err', '등록자(담당)를 입력해주세요.'); return; }
+
+  const picked = [], problems = [];
+  WO_ITEMS.forEach((it, i) => {
+    if (!$('woOn' + i).checked) return;
+    let hex = g('woHex' + i);
+    if (hex && !hex.startsWith('#')) hex = '#' + hex;
+    const row = {
+      material: g('woMat' + i),
+      finishCode: g('woFin' + i),
+      gloss: g('woGlo' + i),
+      colorName: g('woCname' + i),
+      colorEng: g('woCeng' + i),
+      hex: hex,
+      pantone: g('woPantone' + i),
+      supplierCode: g('woSupcode' + i),
+      product: g('woProd' + i) || g('woProd') || '미정',
+      note: '작업지시서 추출'
+    };
+    const missing = [];
+    if (!row.material) missing.push('소재');
+    if (!row.finishCode) missing.push('마감');
+    if (!row.gloss) missing.push('광택');
+    if (!row.colorName) missing.push('컬러명');
+    if (!/^#[0-9a-fA-F]{6}$/.test(row.hex)) missing.push('HEX');
+    if (missing.length) problems.push('항목 ' + (i + 1) + ' — ' + missing.join(', ') + ' 누락');
+    else picked.push(row);
+  });
+
+  if (problems.length) { show('err', '먼저 아래 항목을 채워주세요.<br>' + problems.join('<br>')); return; }
+  if (!picked.length) { show('err', '등록할 항목을 하나 이상 선택해주세요.'); return; }
+  if (!confirm(picked.length + '건을 등록합니다. 계속할까요?')) return;
+
+  const btn = $('woReg');
+  btn.disabled = true; btn.textContent = '등록 중…';
+  try {
+    const r = await gsRun('submitBatch', picked, {
+      date: g('woDate'), by: g('woBy'), dept: g('woDept'), status: g('woSts')
+    });
+    show(r.failed.length ? 'review' : '',
+      `<b>${r.ok}건 등록 완료</b><br>` +
+      r.codes.map(c => `<span class="code" style="cursor:default">${escapeHtml(c)}</span>`).join(', ') +
+      (r.failed.length ? '<br><br><b>실패 ' + r.failed.length + '건</b><br>' + r.failed.map(escapeHtml).join('<br>') : ''));
+    reload();
+  } catch (err) {
+    show('err', '등록 실패: ' + (err.message || err));
+  }
+  btn.disabled = false; btn.textContent = '선택 항목 등록';
+}
+
+function toggleStatus(code, ev) {
+  ev.stopPropagation();
+  const r = DATA.find(r => r.code === code);
+  if (!r) return;
+  r.status = r.status === '확정' ? '검토중' : '확정';
+  draw();
+  google.script.run.withFailureHandler(() => { r.status = r.status === '확정' ? '검토중' : '확정'; draw(); }).toggleStatusSrv(code);
+}
+function delRec(code, ev) {
+  if (ev) ev.stopPropagation();
+  const r = DATA.find(r => r.code === code);
+  if (!r) return;
+  if (!confirm(r.code + ' (' + r.color + ')\n이 CMF를 삭제할까요? 시트에서도 삭제되며 되돌릴 수 없습니다.')) return;
+  DATA = DATA.filter(x => x.code !== code); SEL.delete(code); draw();
+  google.script.run.withFailureHandler(err => { alert('삭제 실패: ' + (err.message || err)); reload(); }).deleteEntry(code);
+}
+
+let EDIT = null;
+function openEdit(code, ev) {
+  if (ev) ev.stopPropagation();
+  const r = DATA.find(r => r.code === code);
+  if (!r) return;
+  EDIT = code;
+  $('eCode').textContent = r.code;
+  $('eFixed').textContent = r.mat + ' · ' + r.color + ' · ' + r.finish + ' · ' + r.gloss;
+  $('eDate').value = r.at || '';
+  $('eHex').value = r.hex || '';
+  $('ePick').value = /^#[0-9a-fA-F]{6}$/.test(r.hex) ? r.hex : '#cccccc';
+  $('ePantone').value = r.pantone || '';
+  $('eStatus').value = r.status;
+  $('eSup').value = r.sup || '';
+  $('eSupcode').value = r.supcode || '';
+  $('ePrice').value = r.price || '';
+  $('eBy').value = r.updatedBy || r.by || '';
+  $('eDept').value = r.dept || '';
+  $('eBox').value = r.box || '';
+  $('eNote').value = r.note || '';
+  $('eMeta').innerHTML =
+    `등록 ${escapeHtml([r.dept, r.by].filter(Boolean).join(' · ') || '-')} · ${escapeHtml(r.at || '-')}` +
+    (r.updatedAt ? `<br>최근 수정 ${escapeHtml(r.updatedBy || '-')} · ${escapeHtml(r.updatedAt)}` : '');
+  resetPhoto('ePhoto', 'ePhotoPrev', 'ePhotoName', '새 사진 선택 (선택 사항)');
+  $('ePhotoPrev').style.backgroundImage = r.photo ? `url('${r.photo}')` : '';
+  $('eNewProd').value = '';
+  renderApplied(r);
+  $('editOvl').classList.add('on');
+}
+function renderApplied(r) {
+  const box = $('eApplied');
+  if (!r.products || !r.products.length) {
+    box.innerHTML = '<p class="hint" style="margin:0">아직 적용된 제품이 없습니다 (미정).</p>';
+    return;
+  }
+  box.innerHTML = r.products.map(p =>
+    `<div class="a"><span>${escapeHtml(p.product)}</span><span class="d">${p.date || ''}</span></div>`).join('');
+}
+function addProductToEdit() {
+  const input = $('eNewProd');
+  const product = input.value.trim();
+  if (!product) { alert('추가할 제품명을 입력해주세요.'); return; }
+  const r = DATA.find(r => r.code === EDIT);
+  google.script.run
+    .withSuccessHandler(() => {
+      showToast('적용 제품이 추가되었습니다: ' + product);
+      input.value = '';
+      if (r) {
+        r.products = r.products || [];
+        r.products.push({ product, date: new Date().toISOString().slice(0, 10), note: '' });
+      }
+      renderApplied(r);
+      draw();
+    })
+    .withFailureHandler(err => alert('추가 실패: ' + (err.message || err)))
+    .addApplication(EDIT, product, '');
+}
+function closeEdit() { $('editOvl').classList.remove('on'); EDIT = null; }
+$('editOvl').addEventListener('click', e => { if (e.target.id === 'editOvl') closeEdit(); });
+
+let QR_LINK = '';
+function showQr(code, ev) {
+  if (ev) ev.stopPropagation();
+  QR_LINK = codeUrl(code);
+  $('qrCode').textContent = code;
+  const box = $('qrBox');
+  box.innerHTML = '';
+  if (typeof QRCode !== 'undefined') {
+    new QRCode(box, { text: QR_LINK, width: 196, height: 196, correctLevel: QRCode.CorrectLevel.M });
+  } else {
+    box.innerHTML = '<span class="hint">QR 로드 실패</span>';
+  }
+  $('qrOvl').classList.add('on');
+}
+function copyQrLink() {
+  navigator.clipboard.writeText(QR_LINK).then(() => showToast('링크가 복사되었습니다'))
+    .catch(() => showToast('복사에 실패했습니다'));
+}
+function closeQr() { $('qrOvl').classList.remove('on'); }
+$('qrOvl').addEventListener('click', e => { if (e.target.id === 'qrOvl') closeQr(); });
+
+async function saveEdit() {
+  const r = DATA.find(r => r.code === EDIT);
+  if (!r) return closeEdit();
+  let hex = $('eHex').value.trim();
+  if (hex && !hex.startsWith('#')) hex = '#' + hex;
+  if (hex && !/^#[0-9a-fA-F]{6}$/.test(hex)) { alert('HEX 형식이 올바르지 않습니다 (#RRGGBB)'); return; }
+
+  const btn = $('saveBtn');
+  btn.disabled = true; btn.textContent = '저장 중…';
+
+  const f = {
+    date: $('eDate').value,
+    hex: hex, pantone: $('ePantone').value.trim(),
+    status: $('eStatus').value,
+    sup: $('eSup').value.trim(),
+    supcode: $('eSupcode').value.trim(),
+    price: $('ePrice').value.trim(),
+    by: $('eBy').value.trim(),
+    dept: $('eDept').value.trim(),
+    box: $('eBox').value.trim(),
+    note: $('eNote').value.trim()
+  };
+
+  try {
+    try {
+      f.photo = await uploadPhotoIfAny('ePhoto', 'cmf_edit');
+      if (f.photo) r.photo = f.photo;
+    } catch (photoErr) {
+      f.photo = '';
+      showToast('사진 업로드 실패 — 사진 없이 나머지 내용만 저장합니다');
+    }
+    await gsRun('updateEntry', EDIT, f);
+    r.at = f.date;
+    r.hex = f.hex; r.pantone = f.pantone; r.status = f.status;
+    r.sup = f.sup; r.supcode = f.supcode;
+    r.price = f.price;
+    r.box = f.box; r.note = f.note;
+    r.updatedBy = f.by; r.dept = f.dept;
+    r.updatedAt = new Date().toISOString().slice(0, 10);
+    draw();
+    btn.disabled = false; btn.textContent = '저장';
+    closeEdit();
+  } catch (err) {
+    btn.disabled = false; btn.textContent = '저장';
+    alert('저장 실패: ' + (err.message || err));
+    reload();
+  }
+}
+function delFromModal() { const c = EDIT; closeEdit(); delRec(c); }
+
+function toggleSel(code, cb) {
+  cb.checked ? SEL.add(code) : SEL.delete(code);
+  $('selN').textContent = SEL.size;
+}
+function selAll(cb) {
+  SEL.clear();
+  if (cb.checked) filtered().forEach(r => SEL.add(r.code));
+  $('selN').textContent = SEL.size;
+  draw();
+}
+function bulkLabels() {
+  if (!SEL.size) { alert('목록에서 체크박스로 출력할 CMF를 먼저 선택해주세요.'); return; }
+  printLabels([...SEL]);
+}
+function printLabels(codes, ev) {
+  if (ev) ev.stopPropagation();
+  const root = $('print-root');
+  root.innerHTML = codes.map(c => {
+    const r = DATA.find(x => x.code === c);
+    if (!r) return '';
+    return `<div class="plabel">
+     <div class="pl">
+      <div class="plc">${escapeHtml(r.code)}</div>
+      <div class="pln">${escapeHtml(r.color)}</div>
+      <div class="plp">${escapeHtml(r.prod || '미정')}</div>
+      <div class="pli">${r.supcode ? '품번 ' + escapeHtml(r.supcode) + '<br>' : ''}${escapeHtml(r.by || '담당 미지정') + ' · ' + (r.at || '').slice(0, 7)}</div>
+     </div>
+     <div class="pr">
+      <div class="pq" id="qr-${c}"></div>
+      <div class="pqb">${r.box || '-'}</div>
+     </div>
+    </div>`;
+  }).join('');
+  codes.forEach(c => {
+    const el = $('qr-' + c);
+    if (el && typeof QRCode !== 'undefined') {
+      new QRCode(el, { text: codeUrl(c), width: 96, height: 96, correctLevel: QRCode.CorrectLevel.M });
+    } else if (el) {
+      el.innerHTML = '<span style="font-size:5pt;color:#999">QR 로드 실패</span>';
+    }
+  });
+  setTimeout(() => window.print(), 400);
+}
+
+function filtered() {
+  const q = $('q').value.toLowerCase();
+  const fm = $('fmat').value, fs = $('fsts').value;
+  let rows = DATA.filter(r => {
+    const hay = [r.code, r.legacy, r.color, r.mat, r.finish, r.gloss, r.prod, r.sup, r.supcode, r.box, r.dept, r.note].join(' ').toLowerCase();
+    return (!q || hay.includes(q)) && (!fm || r.mat === fm) && (!fs || r.status === fs);
+  });
+  const sortBy = $('sortBy').value;
+  rows = rows.slice();
+  if (sortBy === 'code') rows.sort((a, b) => a.code.localeCompare(b.code));
+  else if (sortBy === 'box') rows.sort((a, b) => (a.box || '').localeCompare(b.box || '') || a.code.localeCompare(b.code));
+  else if (sortBy === 'color') rows.sort((a, b) => (a.color || '').localeCompare(b.color || ''));
+  else rows.sort((a, b) => (b.at || '').localeCompare(a.at || ''));
+  return rows;
+}
+function stBadge(r) {
+  return `<span class="bdg st ${r.status === '확정' ? 'ok' : 'rv'}" onclick="toggleStatus('${r.code}',event)" title="클릭하면 상태가 바뀝니다">${r.status}</span>`;
+}
+function groupRows(rows, mode) {
+  const map = {};
+  const keyFn =
+    mode === 'material' ? (r => [r.mat || '미정']) :
+    mode === 'status' ? (r => [r.status || '미정']) :
+    (r => (r.products && r.products.length) ? [...new Set(r.products.map(p => p.product || '미정'))] : [r.prod || '미정']);
+  rows.forEach(r => { keyFn(r).forEach(k => { (map[k] || (map[k] = [])).push(r); }); });
+  const keys = Object.keys(map).sort((a, b) => {
+    if (a === '미정') return 1;
+    if (b === '미정') return -1;
+    return a.localeCompare(b, 'ko');
+  });
+  return keys.map(k => ({ label: k, rows: map[k] }));
+}
+function groupByDate(rows) {
+  const map = {};
+  rows.forEach(r => {
+    const key = r.at ? r.at.slice(0, 7) : '날짜 미상';
+    (map[key] || (map[key] = [])).push(r);
+  });
+  return Object.keys(map).sort((a, b) => b.localeCompare(a)).map(k => {
+    const m = /^(\d{4})-(\d{2})$/.exec(k);
+    return { label: m ? `${m[1]}년 ${parseInt(m[2], 10)}월` : k, rows: map[k] };
+  });
+}
+
+function cardHtml(r) {
+  const reg = [r.dept, r.by, r.at].filter(Boolean).join(' · ');
+  const upd = [r.dept, r.updatedBy, r.updatedAt].filter(Boolean).join(' · ');
+  return `
+   <div class="item${r.code === OPENCODE ? ' open' : ''}" onclick="this.classList.toggle('open')">
+    <div class="swatch" style="background-color:${escapeHtml(r.hex || 'transparent')};${r.photo ? `background-image:url('${escapeHtml(r.photo)}')` : ''}"></div>
+    <div class="body">
+     <div class="code" onclick="copyCode('${r.code}',event)" title="클릭하여 코드 복사">${escapeHtml(r.code)}</div>
+     <div class="nm">${escapeHtml(r.mat)} · ${escapeHtml(r.color)}</div>
+     ${r.prod ? `<div class="pd"><i>적용</i> ${escapeHtml(r.prod)}</div>` : ''}
+     <div class="bdgs"><span class="bdg">${escapeHtml(r.finish)}</span><span class="bdg">${escapeHtml(r.gloss)}</span>${stBadge(r)}</div>
+     <div class="detail">
+      <div class="boxbig"><span class="l">라이브러리<br>보관 장소</span><span class="v">${escapeHtml(r.box || '-')}</span></div>
+      <b>색상값 (HEX)</b> ${escapeHtml(r.hex || '-')}${r.pantone ? '<br><b>Pantone</b> ' + escapeHtml(r.pantone) : ''}
+      ${r.supcode ? '<br><b>품번</b> ' + escapeHtml(r.supcode) + (r.sup ? ' (' + escapeHtml(r.sup) + ')' : '') : ''}
+      ${r.price ? '<br><b>단가</b> ' + escapeHtml(String(r.price)) + '원 (야드당)' : ''}
+      ${r.products && r.products.length ? '<br><b>적용 제품</b><div class="plist">' + r.products.map(p => `<div class="p"><span>${escapeHtml(p.product)}</span><span class="d">${p.date || ''}</span></div>`).join('') + '</div>' : ''}
+      ${r.note ? '<br>' + escapeHtml(r.note) : ''}
+      <div class="meta"><b>등록</b>${escapeHtml(reg || '-')}</div>
+      ${r.updatedAt ? `<div class="meta"><b>최근 수정</b>${escapeHtml(upd)}</div>` : ''}
+      ${r.legacy ? `<div class="meta"><b>이전 코드</b>${escapeHtml(r.legacy)}</div>` : ''}
+      <div class="ops">
+       <button class="mini" type="button" onclick="showQr('${r.code}',event)">QR</button>
+       <button class="mini" type="button" onclick="printLabels(['${r.code}'],event)">라벨</button>
+       <button class="mini" type="button" onclick="openEdit('${r.code}',event)">수정</button>
+       <button class="mini danger" type="button" onclick="delRec('${r.code}',event)">삭제</button>
+      </div>
+     </div>
+    </div>
+   </div>`;
+}
+
+function rowHtml(r) {
+  const updated = r.updatedAt ? `${r.updatedAt} · ${r.updatedBy || ''}` : '-';
+  return `
+   <tr>
+    <td class="free"><input type="checkbox" ${SEL.has(r.code) ? 'checked' : ''} onclick="toggleSel('${r.code}',this)"></td>
+    <td class="free"><span class="dot" style="background-color:${escapeHtml(r.hex || 'transparent')};${r.photo ? `background-image:url('${escapeHtml(r.photo)}')` : ''}"></span></td>
+    <td class="free"><span class="code" onclick="copyCode('${r.code}',event)" title="클릭하여 코드 복사">${escapeHtml(r.code)}</span></td>
+    <td title="${escapeHtml(r.mat)}">${escapeHtml(r.mat)}</td>
+    <td title="${escapeHtml(r.color)}">${escapeHtml(r.color)}</td>
+    <td title="${escapeHtml(r.finish)}">${escapeHtml(r.finish)}</td>
+    <td title="${escapeHtml(r.gloss)}">${escapeHtml(r.gloss)}</td>
+    <td title="${escapeHtml(r.supcode || '-')}">${escapeHtml(r.supcode || '-')}</td>
+    <td class="free">${r.price ? escapeHtml(String(r.price)) + '원' : '-'}</td>
+    <td class="free">${escapeHtml(r.box || '-')}</td>
+    <td title="${escapeHtml(r.prod || '-')}">${escapeHtml(r.prod || '-')}</td>
+    <td title="${escapeHtml(updated)}">${escapeHtml(updated)}</td>
+    <td class="free">${stBadge(r)}</td>
+    <td class="free" style="text-align:right">
+     <button class="mini" type="button" onclick="showQr('${r.code}',event)">QR</button>
+     <button class="mini" type="button" onclick="printLabels(['${r.code}'],event)">라벨</button>
+     <button class="mini" type="button" onclick="openEdit('${r.code}',event)">수정</button>
+     <button class="mini danger" type="button" onclick="delRec('${r.code}',event)">삭제</button>
+    </td>
+   </tr>`;
+}
+
+function onFilterChange() { PAGE = 1; draw(); updateFilterBadge(); }
+function setPageSize(n, btn) {
+  PAGE_SIZE = n; PAGE = 1;
+  document.querySelectorAll('#pagesize button').forEach(b => b.classList.toggle('on', b === btn));
+  draw();
+}
+function changePage(delta) {
+  PAGE += delta; draw();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function draw() {
+  const rows = filtered();
+  $('grid').style.display = VIEW === 'card' ? 'block' : 'none';
+  $('listWrap').style.display = VIEW === 'list' ? 'block' : 'none';
+
+  const groupMode = $('groupBy').value;
+  const sortMode = $('sortBy').value;
+  const useDateGroup = groupMode === 'none' && sortMode === 'recent';
+  const isGrouped = groupMode !== 'none' || useDateGroup;
+
+  const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  if (PAGE > totalPages) PAGE = totalPages;
+  if (PAGE < 1) PAGE = 1;
+  const pageRows = rows.slice((PAGE - 1) * PAGE_SIZE, PAGE * PAGE_SIZE);
+  const groups = groupMode !== 'none' ? groupRows(pageRows, groupMode)
+    : (useDateGroup ? groupByDate(pageRows) : null);
+
+  if (VIEW === 'card') {
+    $('grid').innerHTML = !isGrouped
+      ? `<div class="grid">${pageRows.map(cardHtml).join('')}</div>`
+      : groups.map(g => `
+        <div class="grp">
+          <div class="grp-h"><b>${escapeHtml(g.label)}</b><span>${g.rows.length}건</span></div>
+          <div class="grid">${g.rows.map(cardHtml).join('')}</div>
+        </div>`).join('');
+  } else {
+    $('tbody').innerHTML = !isGrouped
+      ? pageRows.map(rowHtml).join('')
+      : groups.map(g => `
+        <tr><td class="grp-td" colspan="14">${escapeHtml(g.label)} &nbsp; <span class="bdg">${g.rows.length}건</span></td></tr>
+        ${g.rows.map(rowHtml).join('')}`).join('');
+  }
+
+  $('empty').style.display = rows.length ? 'none' : 'block';
+  $('stTotal').textContent = DATA.length;
+  $('stOk').textContent = DATA.filter(r => r.status === '확정').length;
+  $('stRv').textContent = DATA.filter(r => r.status === '검토중').length;
+
+  const pager = $('pager');
+  if (!rows.length) {
+    pager.style.display = 'none';
+  } else {
+    pager.style.display = 'flex';
+    const start = (PAGE - 1) * PAGE_SIZE + 1;
+    const end = Math.min(PAGE * PAGE_SIZE, rows.length);
+    $('pagerInfo').textContent = `${start}–${end} / 총 ${rows.length}건`;
+    $('pgPos').textContent = `${PAGE} / ${totalPages}`;
+    $('pgPrev').disabled = PAGE <= 1;
+    $('pgNext').disabled = PAGE >= totalPages;
+  }
+}
+</script>
+</body>
+</html>
